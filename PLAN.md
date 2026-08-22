@@ -68,11 +68,16 @@ Also landed in phase 1, found while testing:
 
 ## Phase 2 — cloud shapes everywhere
 
-- [ ] Quick-link cards on the new tab page become clouds: rounded body with
+- [x] Quick-link cards on the new tab page become clouds: rounded body with
       lobes off the top edge that overhang the sides slightly.
-- [ ] Share the lobe generator between the tab strip and the pages instead of
-      writing it twice.
-- [ ] General polish pass: hover lift, focus rings, transitions.
+- [x] Share the lobe generator between the tab strip and the pages instead of
+      writing it twice - `src/shared/clouds.js`, loaded as a plain script by
+      both the chrome renderer and the file:// pages.
+- [x] General polish pass: hover lift, focus rings, transitions.
+
+Note: card fills have to be **opaque**. The lobes overlap the body and each
+other, so any alpha shows every seam - which is why `--card-solid` and
+`--card-hover` exist alongside the translucent `--card`.
 
 Verify: one screenshot of the new tab page.
 

@@ -23,6 +23,8 @@ document.getElementById('search-form').addEventListener('submit', (event) => {
 });
 
 const linksRoot = document.getElementById('links');
+const cards = [];
+
 for (const link of QUICK_LINKS) {
   const node = document.createElement('button');
   node.className = 'link';
@@ -39,7 +41,30 @@ for (const link of QUICK_LINKS) {
   node.append(badge, label);
   node.addEventListener('click', () => go(link.url));
   linksRoot.appendChild(node);
+  cards.push({ node, seed: link.label });
 }
+
+/**
+ * Give every card its cloud, using the same generator as the tab strip. The
+ * lobes are allowed to overhang the sides a little, which is what stops a grid
+ * of them looking like a row of identical boxes.
+ */
+function shapeCards() {
+  for (const { node, seed } of cards) {
+    window.CloudShape.buildLobes(node, seed, {
+      width: node.offsetWidth,
+      base: 26,
+      spacing: 64,
+      maxLobes: 3,
+      overhang: 0.1,
+      className: 'link-lobe'
+    });
+  }
+}
+
+shapeCards();
+// The grid reflows with the window, and the lobe count follows the card width.
+window.addEventListener('resize', shapeCards);
 
 async function hydrate() {
   if (!bridge) return;

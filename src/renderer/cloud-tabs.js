@@ -15,63 +15,9 @@
 
 const TAB_HEIGHT = 34;
 const LOBE_SPACING = 90; // px of tab width one lobe is expected to cover
+const NARROW_WIDTH = 108;
 
-function hashString(text) {
-  let h = 2166136261;
-  for (let i = 0; i < text.length; i++) {
-    h ^= text.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return h >>> 0;
-}
-
-/** mulberry32 - a tiny deterministic PRNG, so one seed always yields one cloud. */
-function seededRandom(seed) {
-  let a = seed;
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-function buildLobes(tabEl, id, width) {
-  for (const old of tabEl.querySelectorAll('.lobe')) old.remove();
-
-  const random = seededRandom(hashString(id));
-  // Width sets the ceiling; each cloud then draws somewhere between one lobe
-  // and that many. Sparse is the point - every cloud keeps at least one.
-  const ceiling = Math.max(1, Math.min(3, Math.round(width / LOBE_SPACING)));
-  const count = 1 + Math.floor(random() * ceiling);
-
-  // Where the tallest lobe sits, as a fraction of the tab's width. The app
-  // mark puts it right of centre; each cloud wanders a little either side.
-  const peak = 0.34 + random() * 0.30;
-  const fragment = document.createDocumentFragment();
-
-  for (let i = 0; i < count; i++) {
-    const position = (i + 0.5) / count + (random() - 0.5) * (0.5 / count);
-    // Falls off with distance from the peak: one dominant lobe, smaller rest.
-    // A steep falloff is what keeps the silhouette stepped: one lobe towers,
-    // the rest stay low. Without it, equal-height lobes merge into a slab.
-    const falloff = Math.cos(Math.min(1, Math.abs(position - peak) * 1.35) * (Math.PI / 2)) ** 2.2;
-    const height = Math.round(TAB_HEIGHT * (0.30 + 0.62 * falloff) * (0.92 + random() * 0.16));
-    // Long, low lobes are what make this read as a drifting cloud rather than
-    // a row of bubbles - so they run well wider than they are tall.
-    const lobeWidth = Math.round(height * (1.9 + random() * 1.5));
-
-    const lobe = document.createElement('span');
-    lobe.className = 'lobe';
-    lobe.style.width = `${lobeWidth}px`;
-    lobe.style.height = `${height}px`;
-    lobe.style.left = `${(position * 100).toFixed(2)}%`;
-    lobe.style.bottom = `${Math.round(TAB_HEIGHT - height * (0.55 + random() * 0.1))}px`;
-    fragment.appendChild(lobe);
-  }
-
-  tabEl.appendChild(fragment);
-}
+const { buildLobes } = window.CloudShape;
 
 const ICON_CLOSE =
   '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
@@ -156,7 +102,11 @@ class CloudTabStrip {
     if (width <= 0) return;
     if (!force && Math.abs(width - this.lastWidth) < LOBE_SPACING / 2) return;
     this.lastWidth = width;
-    for (const [id, node] of this.nodes) buildLobes(node.el, id, width);
+    for (const [id, node] of this.nodes) buildLobes(node.el, id, this._lobeOptions(width));
+  }
+
+  _lobeOptions(width) {
+    return { width, base: TAB_HEIGHT, spacing: LOBE_SPACING, maxLobes: 3 };
   }
 
   _create(tab) {
@@ -181,7 +131,7 @@ class CloudTabStrip {
     close.title = 'Close tab';
 
     el.append(icon, title, audio, close);
-    buildLobes(el, tab.id, this.lastWidth || this.root.clientWidth || 190);
+    buildLobes(el, tab.id, this._lobeOptions(this.lastWidth || this.root.clientWidth || 190));
 
     el.addEventListener('click', (e) => {
       if (e.target.closest('.tab-close') || e.target.closest('.tab-audio')) return;
