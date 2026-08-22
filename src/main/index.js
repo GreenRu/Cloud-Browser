@@ -74,6 +74,9 @@ function registerIpc() {
   ipcMain.on('view:sidebar-width', withShell((s, width) => s.store.set('sidebarWidth', width)));
   ipcMain.on('view:theme', withShell((s, theme) => s.setTheme(theme)));
 
+  ipcMain.on('preview:show', withShell((s, input, rect, viewport) => s.showPreview(input, rect, viewport)));
+  ipcMain.on('preview:hide', withShell((s) => s.hidePreview()));
+
   ipcMain.on('find:query', withShell((s, query, opts) => s.find(query, opts)));
   ipcMain.on('find:stop', withShell((s) => s.stopFind()));
 

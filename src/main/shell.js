@@ -2,8 +2,9 @@
 
 const path = require('path');
 const { BrowserWindow, Menu, clipboard, shell, screen, nativeTheme } = require('electron');
+const { WebContentsView } = require('electron');
 const { Tab } = require('./tab');
-const { normalizeInput, prettifyUrl } = require('./urls');
+const { normalizeInput, prettifyUrl, resolveLoadTarget } = require('./urls');
 const { PasswordVault } = require('./passwords');
 
 const PARTITION = 'persist:cloud';
@@ -57,6 +58,9 @@ class BrowserShell {
     this.activeId = null;
     this.insets = { ...DEFAULT_INSETS };
     this.findQuery = '';
+    this.previewView = null;
+    this.previewAttached = false;
+    this.previewUrl = null;
 
     const bounds = fitToScreen(store.get('window') || {});
     const theme = THEME_CHROME[store.get('theme')] || THEME_CHROME.day;
@@ -96,6 +100,7 @@ class BrowserShell {
     // 'before-quit' fire, they have already been torn down.
     this.window.on('close', () => this.persistSession());
     this.window.on('closed', () => {
+      this.destroyPreview();
       for (const tab of this.tabs.values()) tab.destroy();
       this.tabs.clear();
     });
@@ -218,6 +223,7 @@ class BrowserShell {
       this.window.contentView.removeChildView(previous.view);
     }
 
+    this.hidePreview();
     this.activeId = id;
     this.window.contentView.addChildView(tab.view);
     this._layout();
@@ -274,6 +280,83 @@ class BrowserShell {
 
   get activeTab() {
     return this.tabs.get(this.activeId) || null;
+  }
+
+  // --- omnibox preview -----------------------------------------------------
+
+  /**
+   * The live page inside the thought bubble.
+   *
+   * It is a plain view with no preload: nothing here should capture logins or
+   * receive autofill, because the user has not chosen to visit this page yet -
+   * they are still typing its address.
+   */
+  _ensurePreview() {
+    if (this.previewView && !this.previewView.webContents.isDestroyed()) return this.previewView;
+
+    this.previewView = new WebContentsView({
+      webPreferences: {
+        partition: PARTITION,
+        contextIsolation: true,
+        nodeIntegration: false,
+        sandbox: true,
+        javascript: true,
+        backgroundThrottling: false
+      }
+    });
+    this.previewView.setBackgroundColor('#ffffff');
+    this.previewView.setBorderRadius?.(0);
+
+    // A preview must never become a window or steal the session.
+    this.previewView.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+    return this.previewView;
+  }
+
+  showPreview(input, rect, viewport) {
+    if (this.window.isDestroyed() || !rect || !viewport) return;
+
+    const url = normalizeInput(input, this.store.get('searchEngine'), this.store.get('shortcuts'));
+    if (!url) return this.hidePreview();
+
+    const view = this._ensurePreview();
+    if (!this.previewAttached) {
+      this.window.contentView.addChildView(view);
+      this.previewAttached = true;
+    }
+
+    view.setBounds({
+      x: Math.round(rect.x),
+      y: Math.round(rect.y),
+      width: Math.max(1, Math.round(rect.width)),
+      height: Math.max(1, Math.round(rect.height))
+    });
+
+    // Every keystroke asks for a load, so drop the one still in flight rather
+    // than letting a queue of half-finished pages pile up.
+    if (this.previewUrl !== url) {
+      this.previewUrl = url;
+      view.webContents.stop();
+      view.webContents.loadURL(resolveLoadTarget(url)).catch(() => {});
+    }
+    this.send('shell:preview-target', { url: prettifyUrl(url) });
+  }
+
+  hidePreview() {
+    if (!this.previewAttached || !this.previewView) return;
+    if (!this.previewView.webContents.isDestroyed()) {
+      this.previewView.webContents.stop();
+      this.window.contentView.removeChildView(this.previewView);
+    }
+    this.previewAttached = false;
+    this.previewUrl = null;
+  }
+
+  destroyPreview() {
+    this.hidePreview();
+    if (this.previewView && !this.previewView.webContents.isDestroyed()) {
+      this.previewView.webContents.close();
+    }
+    this.previewView = null;
   }
 
   // --- saved logins --------------------------------------------------------

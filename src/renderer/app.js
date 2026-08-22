@@ -44,7 +44,10 @@ const el = {
   toast: $('toast'),
   toastText: $('toast-text'),
   toastAction: $('toast-action'),
-  stage: $('stage')
+  stage: $('stage'),
+  thought: $('thought'),
+  thoughtLabel: $('thought-label'),
+  thoughtScreen: $('thought-screen')
 };
 
 const BADGE_SECURE =
@@ -178,14 +181,19 @@ function reportContentBounds() {
 }
 
 new ResizeObserver(reportContentBounds).observe(el.stage);
-window.addEventListener('resize', reportContentBounds);
+window.addEventListener('resize', () => {
+  reportContentBounds();
+  if (!el.thought.hidden) sendPreview(lastPreviewKey);
+});
 
 // ---------------------------------------------------------------- sidebar
 
 function applySidebarWidth(width, { persist = true } = {}) {
   const clamped = Math.round(Math.max(SIDEBAR_COLLAPSED, Math.min(SIDEBAR_MAX, width)));
   const collapsed = clamped < SIDEBAR_MIN;
-  el.sidebar.style.width = `${collapsed ? SIDEBAR_COLLAPSED : clamped}px`;
+  const applied = collapsed ? SIDEBAR_COLLAPSED : clamped;
+  el.sidebar.style.width = `${applied}px`;
+  document.documentElement.style.setProperty('--sidebar-w', `${applied}px`);
   el.sidebar.classList.toggle('collapsed', collapsed);
   state.sidebarWidth = collapsed ? SIDEBAR_COLLAPSED : clamped;
   strip.reflow(true);
@@ -218,6 +226,64 @@ el.resizer.addEventListener('dblclick', () => {
   applySidebarWidth(collapsed ? SIDEBAR_DEFAULT : SIDEBAR_COLLAPSED);
 });
 
+// ---------------------------------------------------------------- thought bubble
+
+/**
+ * While the address bar has content, a thought bubble hangs off it showing the
+ * page that pressing Enter would open - rendered live, not described.
+ *
+ * The bubble itself is only a frame: its screen area is reported to the main
+ * process, which parks a real view over that rect. Same trick as the page
+ * stage, so both stay in step when the window or sidebar moves.
+ */
+let lastPreviewKey = '';
+
+function normalizedInput(value) {
+  // Spaces alone never trigger a reload, per the "excluding spaces" rule.
+  return value.replace(/\s+/g, ' ').trim();
+}
+
+function updateThought() {
+  const raw = el.address.value;
+  const key = normalizedInput(raw);
+
+  if (!key || document.activeElement !== el.address) return hideThought();
+
+  el.thought.hidden = false;
+  el.thoughtLabel.textContent = key;
+
+  if (key === lastPreviewKey) {
+    // Still position it: the window may have moved since the last keystroke.
+    sendPreview(key);
+    return;
+  }
+  lastPreviewKey = key;
+  sendPreview(key);
+}
+
+function sendPreview(key) {
+  const rect = el.thoughtScreen.getBoundingClientRect();
+  if (!rect.width || !rect.height) return;
+  api.preview.show(
+    key,
+    { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+    { width: window.innerWidth, height: window.innerHeight }
+  );
+}
+
+// getBoundingClientRect reports the *transformed* box, so a rect measured
+// during the entrance animation is scaled down. Re-send once it settles.
+el.thought.addEventListener('animationend', () => {
+  if (!el.thought.hidden && lastPreviewKey) sendPreview(lastPreviewKey);
+});
+
+function hideThought() {
+  if (el.thought.hidden) return;
+  el.thought.hidden = true;
+  lastPreviewKey = '';
+  api.preview.hide();
+}
+
 // ---------------------------------------------------------------- omnibox
 
 el.omnibox.addEventListener('click', (event) => {
@@ -236,10 +302,12 @@ el.address.addEventListener('blur', () => {
   el.omnibox.classList.remove('focused');
   omniDirty = false;
   el.address.value = displayUrl(activeTab());
+  hideThought();
 });
 
 el.address.addEventListener('input', () => {
   omniDirty = true;
+  updateThought();
 });
 
 el.address.addEventListener('keydown', (e) => {
@@ -247,10 +315,12 @@ el.address.addEventListener('keydown', (e) => {
     const value = el.address.value.trim();
     if (!value) return;
     omniDirty = false;
+    hideThought();
     api.nav.go(value);
     el.address.blur();
   } else if (e.key === 'Escape') {
     omniDirty = false;
+    hideThought();
     el.address.blur();
   }
 });
@@ -378,11 +448,17 @@ window.addEventListener('keydown', (e) => {
 api.on.state(render);
 api.on.toast(showToast);
 api.on.focusOmnibox(() => {
+  // Collapsed, the input is display:none - focusing it would swallow the
+  // keystrokes. Open the sidebar first.
+  if (el.sidebar.classList.contains('collapsed')) applySidebarWidth(SIDEBAR_DEFAULT);
   el.address.focus();
   el.address.select();
 });
 api.on.openFind(openFind);
 api.on.savePassword(showSavePassword);
+api.on.previewTarget(({ url }) => {
+  el.thoughtLabel.textContent = url;
+});
 api.on.findResult(({ matches, current }) => {
   el.findCount.textContent = `${matches ? current : 0}/${matches || 0}`;
 });

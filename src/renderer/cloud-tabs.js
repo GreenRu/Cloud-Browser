@@ -14,7 +14,7 @@
  */
 
 const TAB_HEIGHT = 34;
-const LOBE_SPACING = 92; // px of tab width each lobe is expected to cover
+const LOBE_SPACING = 110; // px of tab width each lobe is expected to cover
 
 function hashString(text) {
   let h = 2166136261;
@@ -40,7 +40,10 @@ function buildLobes(tabEl, id, width) {
   for (const old of tabEl.querySelectorAll('.lobe')) old.remove();
 
   const random = seededRandom(hashString(id));
-  const count = Math.max(2, Math.min(4, Math.round(width / LOBE_SPACING)));
+  // Width sets a sensible floor so a wide cloud is never bald, then each cloud
+  // draws its own number of lobes on top of that.
+  const floor = Math.max(2, Math.min(4, Math.round(width / LOBE_SPACING)));
+  const count = Math.min(6, floor + Math.floor(random() * 3));
 
   // Where the tallest lobe sits, as a fraction of the tab's width. The app
   // mark puts it right of centre; each cloud wanders a little either side.

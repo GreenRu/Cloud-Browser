@@ -40,6 +40,11 @@ contextBridge.exposeInMainWorld('cloud', {
     setTheme: (theme) => ipcRenderer.send('view:theme', theme)
   },
 
+  preview: {
+    show: (input, rect, viewport) => ipcRenderer.send('preview:show', input, rect, viewport),
+    hide: () => ipcRenderer.send('preview:hide')
+  },
+
   find: {
     query: (text, opts) => ipcRenderer.send('find:query', text, opts),
     stop: () => ipcRenderer.send('find:stop')
@@ -71,6 +76,7 @@ contextBridge.exposeInMainWorld('cloud', {
     toast: listen('shell:toast'),
     focusOmnibox: listen('shell:focus-omnibox'),
     openFind: listen('shell:open-find'),
-    savePassword: listen('shell:save-password')
+    savePassword: listen('shell:save-password'),
+    previewTarget: listen('shell:preview-target')
   }
 });

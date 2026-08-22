@@ -42,18 +42,29 @@ Rules that follow from that table:
 
 One batch, one launch, one screenshot at the end.
 
-- [ ] Theme changes broadcast to open tabs; built-in pages update live instead
+- [x] Theme changes broadcast to open tabs; built-in pages update live instead
       of only at load. Fixes the start page staying in day mode.
-- [ ] New tabs open in the current theme.
-- [ ] `nativeTheme.themeSource` follows the app theme, so ordinary websites get
+- [x] New tabs open in the current theme.
+- [x] `nativeTheme.themeSource` follows the app theme, so ordinary websites get
       `prefers-color-scheme: dark` too.
-- [ ] Persist theme (already stored; confirm it survives restart).
-- [ ] Close button centred vertically on each cloud.
-- [ ] New-tab button moves below the last cloud in the strip.
-- [ ] Settings button in the sidebar nav row.
-- [ ] Cloud-styled scrollbars.
+- [x] Persist theme (already stored; confirm it survives restart).
+- [x] Close button centred vertically on each cloud.
+- [x] New-tab button moves below the last cloud in the strip.
+- [x] Settings button in the sidebar nav row.
+- [x] Cloud-styled scrollbars.
 
 Verify: one launch, toggle theme, one screenshot.
+
+Also landed in phase 1, found while testing:
+
+- [x] Collapsed sidebar drops the cloud entirely — no lobes, no pill, just a
+      circle around the favicon with an accent ring when active.
+- [x] Lobe count is randomised per cloud, with a width-derived floor.
+- [x] `Ctrl+L` while collapsed opens the sidebar first; it used to focus an
+      input that was `display: none` and swallow every keystroke.
+- [x] Bubble bounds are re-sent on `animationend` — `getBoundingClientRect`
+      reports the *transformed* box, so the preview was being sized from a
+      mid-animation `scale(0.96)` and stayed 4% small.
 
 ## Phase 2 — cloud shapes everywhere
 
@@ -70,22 +81,15 @@ Verify: one screenshot of the new tab page.
 A comic-book thought bubble hanging off the address bar while typing, with three
 small bubbles tapering between it and the field, idly breathing in size.
 
-Open question, decide before building: what the bubble shows.
+Decided: **option (b)** — a real page rendered in the bubble, reloading as you
+type. Guards that keep it sane without breaking the rule: a load only starts
+when the resolved URL actually changes, the in-flight load is stopped first so
+pages cannot queue up, and space-only edits do not count as a character.
 
-- **(a) The destination.** Resolved URL, which shortcut matched, whether it is a
-  search or a host. Cheap, instant, no network.
-- **(b) A live page preview.** A real page rendered in the bubble, reloading as
-  you type. This is the literal reading of "the page view updates every
-  character", and it is the more striking feature — but it fetches a page per
-  keystroke, which is heavy and hits the network hard on a slow link.
-
-Plan: build (a) as the always-on layer, and put (b) behind a debounce so a burst
-of typing collapses into one load. That keeps the feature honest without
-hammering the network on every character.
-
-- [ ] Bubble shell, tail of three tapering circles, idle size animation.
-- [ ] Destination resolution shown live, spaces excluded from triggering.
-- [ ] Preview view, debounced, reusing the existing inset-bounds machinery.
+- [x] Bubble shell, tail of three tapering circles, idle size animation.
+- [x] Destination resolution shown live, spaces excluded from triggering.
+- [x] Live preview view (option (b): a real load per character, skipping
+      space-only changes), reusing the inset-bounds machinery.
 
 Verify: one screenshot, then one interactive pass.
 
