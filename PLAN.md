@@ -94,11 +94,13 @@ Two constraints came out of building it, both worth remembering:
 > view, so the head row and the ring of padding fall outside the view's rect
 > and stay visible. That ring is what reads as the bubble.
 
-> **Attaching a view steals native focus.** That blurred the address bar, which
-> hid the bubble, which tore down the preview a frame after it appeared. Fixed
-> on both sides: the main process hands focus back after attaching and after
-> each load, and the renderer gives blur a 250 ms grace so a focus bounce does
-> not count as the user leaving the field.
+> **A view takes native keyboard focus, repeatedly.** Showing it, a load
+> committing, and the page's own scripts all grab it, and each grab sends the
+> next keystrokes into the preview instead of the address bar. Returning focus
+> from inside the `focus` event does not work - it is re-entrant and gets
+> undone. It has to be deferred out of the focus change (0 / 80 / 250 ms), and
+> the renderer must check where focus actually *is* before acting on a blur
+> rather than trusting that it left.
 
 Phase 4's custom page context menu needs the same overlay treatment — budget
 for it there.

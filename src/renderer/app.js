@@ -332,6 +332,10 @@ el.address.addEventListener('focus', () => {
 el.address.addEventListener('blur', () => {
   clearTimeout(blurTimer);
   blurTimer = setTimeout(() => {
+    // Focus can leave and come straight back when the preview appears, and the
+    // return does not always fire a focus event. Ask where focus actually is
+    // rather than trusting that it left.
+    if (document.activeElement === el.address) return;
     el.omnibox.classList.remove('focused');
     hideThought();
     // Only restore the tab's URL if nothing was typed. Wiping a half-typed

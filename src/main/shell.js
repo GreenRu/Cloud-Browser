@@ -329,6 +329,28 @@ class BrowserShell {
     // A preview must never become a window or steal the session.
     this.previewView.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
 
+    /*
+     * The preview must never hold the keyboard. It can take focus from several
+     * directions - being shown, a load committing, or the page itself calling
+     * focus() or autofocusing a field - and every one of them sends the user's
+     * next keystrokes into the preview instead of the address bar.
+     *
+     * Rather than chase each cause, bounce focus back whenever it lands here.
+     */
+    const returnFocus = () => {
+      if (this.window.isDestroyed() || this.window.webContents.isDestroyed()) return;
+      this.window.webContents.focus();
+    };
+
+    this.previewView.webContents.on('focus', () => {
+      // Returning focus from inside the focus event is re-entrant and gets
+      // undone, so hand it back once the current focus change has finished,
+      // and again shortly after in case the page grabs it as it settles.
+      setTimeout(returnFocus, 0);
+      setTimeout(returnFocus, 80);
+      setTimeout(returnFocus, 250);
+    });
+
     // Attached once, for the window's lifetime, and hidden until wanted.
     // Adding a child view moves native focus to it, and doing that mid-word
     // sends the next keystrokes to the preview instead of the address bar.
@@ -370,10 +392,6 @@ class BrowserShell {
       this.previewUrl = url;
       view.webContents.stop();
       view.webContents.loadURL(resolveLoadTarget(url)).catch(() => {});
-      // A committed load takes focus too; the user is still typing.
-      view.webContents.once('did-finish-load', () => {
-        if (this.previewAttached && !this.window.isDestroyed()) this.window.webContents.focus();
-      });
     }
   }
 
