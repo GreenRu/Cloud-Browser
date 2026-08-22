@@ -193,6 +193,15 @@ under Installed apps — the two things that make Windows consider a program
 installed at all. Every browser on this machine has both; a registry-only
 registration is invisible to that page.
 
+Two smaller details matter as much:
+
+- Entries in `OpenWithProgids` must be an **empty `REG_SZ`**. A zero-length
+  `REG_BINARY` looks equivalent and is silently ignored.
+- The name shown in *Open with* comes from the **executable's version
+  resource**, not from anything registered — so the development launcher would
+  appear as "Electron". `FriendlyAppName` on the application key overrides it.
+  A packaged build carries the right name itself.
+
 Twenty-two file types are claimed, all of them things Chromium can genuinely
 display: `.html`, `.svg`, `.pdf`, `.txt`, `.json`, `.xml` and the common image
 formats. Word documents are deliberately not among them — Chromium cannot

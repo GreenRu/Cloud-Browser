@@ -73,6 +73,9 @@ if ($Unregister) {
     Remove-Key "HKCU:\Software\Classes\$ProgIdHtml"
     Remove-Key "HKCU:\Software\Classes\$ProgIdUrl"
     Remove-Key "HKCU:\Software\$AppName"          # the earlier, generic layout
+    Remove-Key 'HKCU:\Software\Classes\Applications\electron.exe'
+    # Left behind by the app's previous name.
+    Remove-Key 'HKCU:\Software\Classes\Applications\Cloud Browser.exe'
     $reg = 'HKCU:\Software\RegisteredApplications'
     if (Test-Path $reg) {
         Remove-ItemProperty -Path $reg -Name $AppName -ErrorAction SilentlyContinue
@@ -141,6 +144,9 @@ function Set-ProgId($progId, $label, $isProtocol) {
     New-Item -Path "$base\DefaultIcon" -Force | Out-Null
     Set-ItemProperty -Path $base -Name '(Default)' -Value $label
     Set-ItemProperty -Path $base -Name 'FriendlyTypeName' -Value $label
+    # What the "Open with" list shows; without it Windows falls back to the
+    # executable's own name, which here would read "Electron".
+    Set-ItemProperty -Path $base -Name 'FriendlyAppName' -Value $AppName
     if ($isProtocol) {
         # The presence of this empty value is what marks a ProgID as a URL handler.
         Set-ItemProperty -Path $base -Name 'URL Protocol' -Value ''
@@ -157,12 +163,24 @@ foreach ($ext in $FileTypes) {
     # Also offer Stratus under "Open with", whatever the current default is.
     $openWith = "HKCU:\Software\Classes\$ext\OpenWithProgids"
     New-Item -Path $openWith -Force | Out-Null
-    Set-ItemProperty -Path $openWith -Name $ProgIdHtml -Value ([byte[]]@()) -Type Binary
+    # An empty REG_SZ, which is exactly what Edge and IE write here. A
+    # REG_BINARY of zero length looks equivalent and is silently ignored.
+    Set-ItemProperty -Path $openWith -Name $ProgIdHtml -Value '' -Type String
 }
 
 foreach ($scheme in @('http', 'https', 'stratus')) {
     Set-ItemProperty -Path "$cap\URLAssociations" -Name $scheme -Value $ProgIdUrl
 }
+
+# --- what the "Open with" list actually calls it ------------------------------
+#
+# Windows takes that name from the executable's own version resource, not from
+# anything registered above, so the development launcher would be listed as
+# "Electron". FriendlyAppName on the application key overrides it. A packaged
+# build carries the right name itself and does not need this.
+$appExe = "HKCU:\Software\Classes\Applications\$(Split-Path $iconSource -Leaf)"
+New-Item -Path $appExe -Force | Out-Null
+Set-ItemProperty -Path $appExe -Name 'FriendlyAppName' -Value $AppName
 
 New-Item -Path 'HKCU:\Software\RegisteredApplications' -Force | Out-Null
 Set-ItemProperty -Path 'HKCU:\Software\RegisteredApplications' -Name $AppName -Value $CapabilityPath
