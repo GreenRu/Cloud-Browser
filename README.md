@@ -179,6 +179,14 @@ assign `http`, `https` and whichever file types you want. Everything is written
 under `HKEY_CURRENT_USER`, so it needs no administrator rights and touches no
 other account.
 
+The layout matters more than it looks. A registration under
+`Software\<App>\Capabilities` makes Windows treat the program as *an app*; to
+be offered as a *browser* it has to live under
+`Software\Clients\StartMenuInternet\<name>` with a
+`Capabilities\StartMenu\StartMenuInternet` value pointing back at itself. That
+is how Edge and Firefox are registered, and the script mirrors their shape
+key for key.
+
 Twenty-two file types are claimed, all of them things Chromium can genuinely
 display: `.html`, `.svg`, `.pdf`, `.txt`, `.json`, `.xml` and the common image
 formats. Word documents are deliberately not among them — Chromium cannot

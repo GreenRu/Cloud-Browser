@@ -1,18 +1,22 @@
 <#
 .SYNOPSIS
-  Registers Stratus with Windows so it can be picked as the default browser and
-  used to open web files.
+  Registers Stratus with Windows as a browser, so it can be chosen as the
+  default and used to open web files.
 
 .DESCRIPTION
   Windows will not let an application make itself the default - that has been
-  the user's decision alone since Windows 10 1803. What an application *can* do
-  is publish its capabilities, which is what this does: after running it,
-  Stratus appears in Settings > Apps > Default apps, where you assign http,
-  https and whichever file types you want.
+  the user's decision alone since Windows 10 1803. What an application can do
+  is publish its capabilities, which is what this does.
+
+  The layout matters more than it looks. A generic registration under
+  Software\<App>\Capabilities makes Windows treat the program as *an app*; to
+  be offered as a *browser* it has to live under
+  Software\Clients\StartMenuInternet\<name>, with a StartMenu\StartMenuInternet
+  value pointing back at itself. That is how Edge and Firefox are registered on
+  this machine, and this script mirrors their shape.
 
   Everything is written under HKEY_CURRENT_USER, so no administrator rights are
-  needed and nothing is changed for other accounts. Run with -Unregister to
-  remove every key again.
+  needed and nothing changes for other accounts. -Unregister removes all of it.
 
   Only file types a browser can actually display are claimed. Word documents
   are not among them: Chromium cannot render .doc or .docx, which is why Edge
@@ -38,7 +42,8 @@ $ErrorActionPreference = 'Stop'
 $AppName = 'Stratus'
 $ProgIdHtml = 'Stratus.Document'
 $ProgIdUrl = 'Stratus.Url'
-$CapabilityPath = "Software\$AppName\Capabilities"
+$ClientKey = "Software\Clients\StartMenuInternet\$AppName"
+$CapabilityPath = "$ClientKey\Capabilities"
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
 
@@ -58,17 +63,21 @@ function Remove-Key($path) {
 }
 
 if ($Unregister) {
+    Remove-Key "HKCU:\$ClientKey"
     Remove-Key "HKCU:\Software\Classes\$ProgIdHtml"
     Remove-Key "HKCU:\Software\Classes\$ProgIdUrl"
-    Remove-Key "HKCU:\Software\$AppName"
+    Remove-Key "HKCU:\Software\$AppName"          # the earlier, generic layout
     $reg = 'HKCU:\Software\RegisteredApplications'
     if (Test-Path $reg) {
         Remove-ItemProperty -Path $reg -Name $AppName -ErrorAction SilentlyContinue
     }
     foreach ($ext in $FileTypes) {
-        Remove-Key "HKCU:\Software\Classes\$ext\OpenWithProgids"
+        $openWith = "HKCU:\Software\Classes\$ext\OpenWithProgids"
+        if (Test-Path $openWith) {
+            Remove-ItemProperty -Path $openWith -Name $ProgIdHtml -ErrorAction SilentlyContinue
+        }
     }
-    Write-Output "Unregistered $AppName. Windows may still list it until you sign out and back in."
+    Write-Output "Unregistered $AppName."
     return
 }
 
@@ -76,7 +85,8 @@ if ($Unregister) {
 
 if ($Exe) {
     if (-not (Test-Path $Exe)) { Write-Error "No executable at $Exe" }
-    $command = "`"$Exe`" `"%1`""
+    $launch = "`"$Exe`""
+    $openOne = "`"$Exe`" `"%1`""
     $iconSource = $Exe
 } else {
     # The development launcher: Electron plus this project directory. Smart App
@@ -86,43 +96,59 @@ if ($Exe) {
     if (-not (Test-Path $electron)) {
         Write-Error "electron.exe not found at $electron`nRun 'npm install' first, or pass -Exe."
     }
-    $command = "`"$electron`" `"$projectRoot`" `"%1`""
+    $launch = "`"$electron`" `"$projectRoot`""
+    $openOne = "`"$electron`" `"$projectRoot`" `"%1`""
     $iconSource = $electron
 }
 
 $icon = Join-Path $projectRoot 'assets\icon.ico'
-if (-not (Test-Path $icon)) { $icon = "$iconSource,0" }
+$icon = if (Test-Path $icon) { "$icon,0" } else { "$iconSource,0" }
 
-# --- the two ProgIDs Windows opens things through ----------------------------
+# --- the browser client entry, which is what the default list reads ----------
+
+$client = "HKCU:\$ClientKey"
+New-Item -Path "$client\DefaultIcon" -Force | Out-Null
+New-Item -Path "$client\InstallInfo" -Force | Out-Null
+New-Item -Path "$client\shell\open\command" -Force | Out-Null
+New-Item -Path "$client\Capabilities\FileAssociations" -Force | Out-Null
+New-Item -Path "$client\Capabilities\URLAssociations" -Force | Out-Null
+New-Item -Path "$client\Capabilities\StartMenu" -Force | Out-Null
+
+Set-ItemProperty -Path $client -Name '(Default)' -Value $AppName
+Set-ItemProperty -Path "$client\DefaultIcon" -Name '(Default)' -Value $icon
+# No %1 here: this command is "start the browser", not "open this thing".
+Set-ItemProperty -Path "$client\shell\open\command" -Name '(Default)' -Value $launch
+Set-ItemProperty -Path "$client\InstallInfo" -Name 'IconsVisible' -Value 1 -Type DWord
+
+$cap = "$client\Capabilities"
+Set-ItemProperty -Path $cap -Name 'ApplicationName' -Value $AppName
+Set-ItemProperty -Path $cap -Name 'ApplicationDescription' -Value 'A small web browser with cloud-shaped tabs'
+Set-ItemProperty -Path $cap -Name 'ApplicationIcon' -Value $icon
+# Without this back-reference Windows does not count the entry as a browser.
+Set-ItemProperty -Path "$cap\StartMenu" -Name 'StartMenuInternet' -Value $AppName
+
+# --- the ProgIDs Windows actually opens things through -----------------------
 
 function Set-ProgId($progId, $label, $isProtocol) {
     $base = "HKCU:\Software\Classes\$progId"
     New-Item -Path "$base\shell\open\command" -Force | Out-Null
     New-Item -Path "$base\DefaultIcon" -Force | Out-Null
     Set-ItemProperty -Path $base -Name '(Default)' -Value $label
+    Set-ItemProperty -Path $base -Name 'FriendlyTypeName' -Value $label
     if ($isProtocol) {
-        # Presence of this empty value is what marks a ProgID as a URL handler.
+        # The presence of this empty value is what marks a ProgID as a URL handler.
         Set-ItemProperty -Path $base -Name 'URL Protocol' -Value ''
     }
     Set-ItemProperty -Path "$base\DefaultIcon" -Name '(Default)' -Value $icon
-    Set-ItemProperty -Path "$base\shell\open\command" -Name '(Default)' -Value $command
+    Set-ItemProperty -Path "$base\shell\open\command" -Name '(Default)' -Value $openOne
 }
 
 Set-ProgId $ProgIdHtml 'Stratus Document' $false
 Set-ProgId $ProgIdUrl 'Stratus' $true
 
-# --- capabilities, which is what Settings reads ------------------------------
-
-$cap = "HKCU:\$CapabilityPath"
-New-Item -Path "$cap\FileAssociations" -Force | Out-Null
-New-Item -Path "$cap\URLAssociations" -Force | Out-Null
-Set-ItemProperty -Path $cap -Name 'ApplicationName' -Value $AppName
-Set-ItemProperty -Path $cap -Name 'ApplicationDescription' -Value 'A small web browser with cloud-shaped tabs'
-Set-ItemProperty -Path $cap -Name 'ApplicationIcon' -Value $icon
-
 foreach ($ext in $FileTypes) {
     Set-ItemProperty -Path "$cap\FileAssociations" -Name $ext -Value $ProgIdHtml
-    # Also offer Stratus in "Open with", whatever the current default is.
+    # Also offer Stratus under "Open with", whatever the current default is.
     $openWith = "HKCU:\Software\Classes\$ext\OpenWithProgids"
     New-Item -Path $openWith -Force | Out-Null
     Set-ItemProperty -Path $openWith -Name $ProgIdHtml -Value ([byte[]]@()) -Type Binary
@@ -135,13 +161,21 @@ foreach ($scheme in @('http', 'https', 'stratus')) {
 New-Item -Path 'HKCU:\Software\RegisteredApplications' -Force | Out-Null
 Set-ItemProperty -Path 'HKCU:\Software\RegisteredApplications' -Name $AppName -Value $CapabilityPath
 
+# Settings caches the app list; nudge the shell so the entry shows up now.
+$sig = 'using System;using System.Runtime.InteropServices;public class Shell32Notify{[DllImport("shell32.dll")]public static extern void SHChangeNotify(int e,uint f,IntPtr a,IntPtr b);}'
+if (-not ([System.Management.Automation.PSTypeName]'Shell32Notify').Type) { Add-Type -TypeDefinition $sig }
+[Shell32Notify]::SHChangeNotify(0x08000000, 0x0000, [IntPtr]::Zero, [IntPtr]::Zero)
+
 if (-not $Quiet) {
-    Write-Output "Registered $AppName."
-    Write-Output "  launches: $command"
-    Write-Output "  file types: $($FileTypes.Count)"
+    Write-Output "Registered $AppName as a browser."
+    Write-Output "  browser entry: HKCU\$ClientKey"
+    Write-Output "  launches:      $launch"
+    Write-Output "  opens a file:  $openOne"
+    Write-Output "  file types:    $($FileTypes.Count)"
     Write-Output ''
     Write-Output 'Windows does not let an app make itself the default. To finish:'
-    Write-Output '  Settings > Apps > Default apps > Stratus > set http, https and .html'
+    Write-Output '  Settings > Apps > Default apps, search "Stratus", then set http, https and .html'
+    Write-Output '  (if Settings was already open, close and reopen it first)'
     Write-Output ''
-    Write-Output 'Undo with: powershell -ExecutionPolicy Bypass -File tools\register-windows.ps1 -Unregister'
+    Write-Output 'Undo with: npm run unregister'
 }
