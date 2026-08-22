@@ -16,6 +16,7 @@ if (isInternalPage) {
     navigate: (input) => ipcRenderer.send('nav:go', input),
     openTab: (url, background = false) => ipcRenderer.send('tab:new', url, { background }),
     reload: () => ipcRenderer.send('nav:reload'),
+    resolve: (input) => ipcRenderer.invoke('preview:resolve', input),
     getState: () => ipcRenderer.invoke('shell:get-state'),
     history: {
       list: (limit) => ipcRenderer.invoke('history:list', limit),

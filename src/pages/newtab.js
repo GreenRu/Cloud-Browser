@@ -6,21 +6,28 @@ const bridge = window.cloudPage;
  * Where each cloud hangs, and how far away it is.
  *
  * Positions are hand-placed rather than generated: a grid is exactly what this
- * page is trying not to be, and random scatter collides and clumps. `s` is the
- * distance - smaller and fainter reads as further off.
+ * page is trying not to be, and random scatter collides and clumps. They are
+ * percentages so the arrangement survives the window changing shape. `s` is
+ * the distance - smaller and fainter reads as further off.
  */
 const QUICK_LINKS = [
-  { label: 'Google', url: 'https://www.google.com', x: '4%', y: 18, s: 0.82, o: 0.85 },
-  { label: 'GitHub', url: 'https://github.com', x: '38%', y: 96, s: 1, o: 1 },
-  { label: 'Wikipedia', url: 'https://www.wikipedia.org', x: '63%', y: 14, s: 0.74, o: 0.78 },
-  { label: 'YouTube', url: 'https://www.youtube.com', x: '10%', y: 182, s: 0.93, o: 0.95 },
-  { label: 'Hacker News', url: 'https://news.ycombinator.com', x: '56%', y: 152, s: 0.86, o: 0.9 },
-  { label: 'MDN', url: 'https://developer.mozilla.org', x: '30%', y: 258, s: 0.7, o: 0.72 }
+  { label: 'Google', url: 'https://www.google.com', x: '1%', y: '2%', s: 0.9, o: 0.9 },
+  { label: 'Wikipedia', url: 'https://www.wikipedia.org', x: '64%', y: '0%', s: 0.8, o: 0.8 },
+  { label: 'MDN', url: 'https://developer.mozilla.org', x: '8%', y: '27%', s: 0.78, o: 0.8 },
+  { label: 'GitHub', url: 'https://github.com', x: '38%', y: '31%', s: 1.12, o: 1 },
+  { label: 'YouTube', url: 'https://www.youtube.com', x: '3%', y: '62%', s: 1, o: 0.96 },
+  { label: 'Hacker News', url: 'https://news.ycombinator.com', x: '57%', y: '54%', s: 0.92, o: 0.9 }
 ];
+
+// Nothing hangs below this, so the search bubble always has clear sky to
+// appear in. The bubble is drawn above the field, not inside it.
 
 const CLOUD_GLYPH =
   '<svg viewBox="0 0 24 24" aria-hidden="true">' +
   '<path fill="currentColor" d="M6.5 18h11a4 4 0 0 0 .6-7.95A5.5 5.5 0 0 0 7.6 8.6 4.2 4.2 0 0 0 6.5 18Z"/></svg>';
+
+/** Puffy rather than streaky: rounder lobes, and more of them. */
+const PUFFY = { widthRatio: [1.2, 2.05], spacing: 44, maxLobes: 4, overhang: 0.14 };
 
 function go(url) {
   if (bridge) bridge.navigate(url);
@@ -50,6 +57,8 @@ function siteIcon(url) {
   return holder;
 }
 
+/* ---------------------------------------------------------------- clouds */
+
 const field = document.getElementById('sky-field');
 const clouds = [];
 
@@ -57,10 +66,10 @@ QUICK_LINKS.forEach((link, index) => {
   const slot = document.createElement('div');
   slot.className = 'slot';
   slot.style.setProperty('--x', link.x);
-  slot.style.setProperty('--y', link.y + 'px');
+  slot.style.setProperty('--y', link.y);
   // Each cloud drifts on its own clock, so the sky never pulses in unison.
-  slot.style.setProperty('--dur', 7 + index * 1.7 + 's');
-  slot.style.setProperty('--delay', -(index * 2.3) + 's');
+  slot.style.setProperty('--dur', 8 + index * 1.9 + 's');
+  slot.style.setProperty('--delay', -(index * 2.7) + 's');
 
   const cloud = document.createElement('button');
   cloud.className = 'drift';
@@ -80,22 +89,72 @@ QUICK_LINKS.forEach((link, index) => {
   clouds.push({ cloud, seed: link.label });
 });
 
+const askForm = document.getElementById('ask-form');
+
 /** Give every cloud its lobes, using the same generator as the tab strip. */
 function shapeClouds() {
   for (const { cloud, seed } of clouds) {
     window.CloudShape.buildLobes(cloud, seed, {
+      ...PUFFY,
       width: cloud.offsetWidth,
-      base: 24,
-      spacing: 62,
-      maxLobes: 3,
-      overhang: 0.12,
+      base: 38,
       className: 'drift-lobe'
     });
   }
+  window.CloudShape.buildLobes(askForm, 'stratus-search', {
+    ...PUFFY,
+    width: askForm.offsetWidth,
+    base: 34,
+    spacing: 130,
+    minLobes: 3,
+    maxLobes: 5,
+    className: 'ask-lobe'
+  });
 }
 
 shapeClouds();
 window.addEventListener('resize', shapeClouds);
+
+/* ---------------------------------------------------------------- search */
+
+const askInput = document.getElementById('ask');
+const askBubble = document.getElementById('ask-bubble');
+const askTarget = document.getElementById('ask-target');
+const askPuffs = [document.getElementById('ask-puff-1'), document.getElementById('ask-puff-2')];
+
+function setBubble(visible) {
+  askBubble.hidden = !visible;
+  for (const puff of askPuffs) puff.hidden = !visible;
+}
+
+/**
+ * The bubble above the field says where Enter would take you - the same idea
+ * as the address bar's thought bubble, resolved by the main process so the
+ * rules stay in one place. Nothing is fetched.
+ */
+async function updateBubble() {
+  const text = askInput.value.replace(/\s+/g, ' ').trim();
+  if (!text || !bridge) return setBubble(false);
+
+  try {
+    const url = await bridge.resolve(text);
+    if (askInput.value.replace(/\s+/g, ' ').trim() !== text) return;
+    askTarget.textContent = url || text;
+    setBubble(Boolean(url));
+  } catch {
+    setBubble(false);
+  }
+}
+
+askInput.addEventListener('input', updateBubble);
+askInput.addEventListener('blur', () => setBubble(false));
+askInput.addEventListener('focus', updateBubble);
+
+askForm.addEventListener('submit', (event) => {
+  event.preventDefault();
+  const value = askInput.value.trim();
+  if (value) go(value);
+});
 
 /* ---------------------------------------------------------------- recent */
 
@@ -117,7 +176,7 @@ async function hydrate() {
       if (seen.has(entry.url)) continue;
       seen.add(entry.url);
       recent.push(entry);
-      if (recent.length === 6) break;
+      if (recent.length === 5) break;
     }
     if (!recent.length) return;
 
@@ -131,7 +190,6 @@ async function hydrate() {
       link.addEventListener('click', () => go(entry.url));
       list.appendChild(link);
     }
-    document.getElementById('recent').hidden = false;
   } catch {
     /* an empty history simply means no list */
   }

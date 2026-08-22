@@ -17,7 +17,7 @@
          Still lighter than the chrome's sky, so the page card's edge reads. */
       body {
         overflow: hidden;
-        background: linear-gradient(180deg, #c7e1f7 0%, #ddeefb 46%, #f0f7fd 100%);
+        background: linear-gradient(180deg, #c2dff7 0%, #d9ecfb 48%, #eef6fd 100%);
       }
 
       [data-theme="night"] body {
@@ -25,14 +25,15 @@
       }
 
       .sky-page {
-        position: relative;
-        min-height: 100vh;
-        max-width: 860px;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        max-width: 900px;
         margin: 0 auto;
-        padding: 54px 40px 40px;
+        padding: 46px 40px 34px;
       }
 
-      .mark { display: flex; align-items: center; gap: 14px; }
+      .mark { display: flex; align-items: center; gap: 14px; flex: 0 0 auto; }
 
       .mark-cloud {
         width: 44px;
@@ -56,12 +57,13 @@
         color: var(--text);
       }
 
-      /* The sky the clouds hang in. Absolute positions so they can be
-         scattered rather than flowed into rows. */
+      /* The sky the clouds hang in. Positions are percentages so the scatter
+         survives the window changing shape. */
       .sky-field {
         position: relative;
-        height: 330px;
-        margin-top: 26px;
+        flex: 1 1 auto;
+        min-height: 0;
+        margin: 18px 0 4px;
       }
 
       .slot {
@@ -72,35 +74,35 @@
       }
 
       @keyframes drift {
-        from { transform: translate(-7px, 2px); }
-        to { transform: translate(7px, -5px); }
+        from { transform: translate(-8px, 3px); }
+        to { transform: translate(8px, -6px); }
       }
 
       .drift {
         position: relative;
         display: flex;
         align-items: center;
-        gap: 10px;
-        height: 42px;
-        padding: 0 18px;
+        gap: 12px;
+        height: 54px;
+        padding: 0 24px;
         border-radius: 999px;
         /* Opaque: the lobes overlap, and alpha would show every seam. */
         background: var(--card-solid);
         color: var(--text);
-        font-size: 13px;
+        font-size: 14.5px;
         font-weight: 600;
         white-space: nowrap;
         transform: scale(var(--s));
         opacity: var(--o);
-        filter: drop-shadow(0 calc(3px * var(--s)) calc(7px * var(--s)) rgba(20, 45, 75, 0.18));
+        filter: drop-shadow(0 calc(4px * var(--s)) calc(9px * var(--s)) rgba(20, 45, 75, 0.18));
         transition: transform 320ms cubic-bezier(0.34, 1.56, 0.64, 1),
           opacity 220ms ease, filter 220ms ease;
       }
 
       .drift:hover {
-        transform: scale(calc(var(--s) * 1.09)) translateY(-3px);
+        transform: scale(calc(var(--s) * 1.08)) translateY(-3px);
         opacity: 1;
-        filter: drop-shadow(0 8px 16px rgba(20, 45, 75, 0.26));
+        filter: drop-shadow(0 10px 20px rgba(20, 45, 75, 0.26));
       }
 
       .drift:active { transform: scale(calc(var(--s) * 1.02)); }
@@ -117,39 +119,143 @@
       .drift > *:not(.drift-lobe) { position: relative; z-index: 1; }
 
       .drift-icon {
-        width: 17px;
-        height: 17px;
+        width: 20px;
+        height: 20px;
         flex: 0 0 auto;
         display: grid;
         place-items: center;
       }
 
-      .drift-icon img { width: 17px; height: 17px; object-fit: contain; }
-      .drift-icon svg { width: 15px; height: 15px; color: var(--drift-far); }
+      .drift-icon img { width: 20px; height: 20px; object-fit: contain; }
+      .drift-icon svg { width: 18px; height: 18px; color: var(--drift-far); }
 
-      /* Recently visited, set as quiet type rather than another row of cards. */
-      .recent {
+      /* ---------- the ground: search, with its own bubble above ---------- */
+
+      .ground { flex: 0 0 auto; position: relative; }
+
+      .ask-bubble {
         position: absolute;
-        left: 40px;
-        right: 40px;
-        bottom: 34px;
+        left: 50%;
+        bottom: calc(100% + 34px);
+        transform: translateX(-50%);
+        max-width: 100%;
+        padding: 12px 20px;
+        border-radius: 22px;
+        background: var(--card-solid);
+        box-shadow: 0 12px 28px rgba(20, 45, 75, 0.22), 0 3px 7px rgba(20, 45, 75, 0.12);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 13.5px;
+        font-weight: 600;
+        color: var(--text);
+        animation: bubble-in 320ms cubic-bezier(0.22, 1.7, 0.36, 1) both;
       }
 
-      .recent-head {
-        margin: 0 0 9px;
-        font-size: 10.5px;
-        font-weight: 700;
-        letter-spacing: 0.9px;
-        text-transform: uppercase;
+      .ask-bubble[hidden] { display: none; }
+
+      @keyframes bubble-in {
+        from { opacity: 0; transform: translateX(-50%) translateY(12px) scale(0.9); }
+        to { opacity: 1; transform: translateX(-50%); }
+      }
+
+      .ask-bubble span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        max-width: 460px;
+      }
+
+      .ask-arrow { width: 16px; height: 16px; flex: 0 0 auto; color: var(--accent); }
+
+      /* The tail, rising from the search bar into the bubble. */
+      .ask-puff {
+        position: absolute;
+        left: 50%;
+        border-radius: 50%;
+        background: var(--card-solid);
+        box-shadow: 0 2px 5px rgba(20, 45, 75, 0.16);
+        transform: translateX(-50%);
+        animation: puff-breathe var(--dur) ease-in-out var(--delay) infinite alternate;
+      }
+
+      .ask-puff[hidden] { display: none; }
+      .ask-puff-1 { width: 9px;  height: 9px;  bottom: calc(100% + 8px);  margin-left: -26px; --dur: 2.6s; --delay: 0s; }
+      .ask-puff-2 { width: 14px; height: 14px; bottom: calc(100% + 18px); margin-left: -14px; --dur: 3.4s; --delay: -0.8s; }
+
+      @keyframes puff-breathe {
+        from { transform: translateX(-50%) scale(0.78); }
+        to { transform: translateX(-50%) scale(1.15); }
+      }
+
+      .ask {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        height: 56px;
+        padding: 0 10px 0 24px;
+        border-radius: 999px;
+        background: var(--card-solid);
+        box-shadow: 0 6px 18px rgba(20, 45, 75, 0.16);
+        transition: box-shadow 240ms ease, transform 320ms cubic-bezier(0.34, 1.56, 0.64, 1);
+      }
+
+      .ask:focus-within {
+        transform: translateY(-2px);
+        box-shadow: 0 14px 30px rgba(20, 45, 75, 0.22);
+      }
+
+      .ask-lobe {
+        position: absolute;
+        border-radius: 999px;
+        background: inherit;
+        transform: translateX(-50%);
+        pointer-events: none;
+        z-index: -1;
+      }
+
+      .ask > *:not(.ask-lobe) { position: relative; z-index: 1; }
+
+      .ask input {
+        flex: 1 1 auto;
+        min-width: 0;
+        height: 100%;
+        border: 0;
+        outline: none;
+        background: none;
+        color: var(--text);
+        font: inherit;
+        font-size: 15px;
+      }
+
+      .ask input::placeholder { color: var(--text-dim); }
+
+      .ask button {
+        flex: 0 0 auto;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
         color: var(--text-dim);
-        opacity: 0.75;
+        transition: background 160ms ease, color 160ms ease, transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1);
       }
 
-      .recent-list { display: flex; flex-wrap: wrap; gap: 4px 20px; }
+      .ask button:hover { background: var(--card-hover); color: var(--text); transform: scale(1.1); }
+      .ask button svg { width: 19px; height: 19px; }
+
+      .recent-list {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 3px 22px;
+        margin-top: 16px;
+        min-height: 18px;
+      }
 
       .recent-link {
-        max-width: 220px;
-        padding: 2px 0;
+        max-width: 200px;
         color: var(--text-dim);
         font-size: 12.5px;
         overflow: hidden;
@@ -161,9 +267,9 @@
 
       .recent-link:hover { color: var(--text); border-bottom-color: currentColor; }
 
-      @media (max-height: 560px) {
-        .sky-field { height: 210px; }
-        .recent { display: none; }
+      @media (max-height: 620px) {
+        .recent-list { display: none; }
+        .sky-page { padding-top: 30px; }
       }
     </style>
   </head>
@@ -178,8 +284,29 @@
 
       <section class="sky-field" id="sky-field"></section>
 
-      <footer class="recent" id="recent" hidden>
-        <h2 class="recent-head">Recently visited</h2>
+      <footer class="ground">
+        <span class="ask-puff ask-puff-1" id="ask-puff-1" hidden></span>
+        <span class="ask-puff ask-puff-2" id="ask-puff-2" hidden></span>
+
+        <div class="ask-bubble" id="ask-bubble" hidden>
+          <svg class="ask-arrow" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 12h13M13 6l6 6-6 6" />
+          </svg>
+          <span id="ask-target"></span>
+        </div>
+
+        <form class="ask" id="ask-form">
+          <input id="ask" type="text" spellcheck="false" autocomplete="off"
+                 placeholder="Search the sky, or type an address" aria-label="Search or type an address" />
+          <button type="submit" aria-label="Go">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M5 12h13M13 6l6 6-6 6" />
+            </svg>
+          </button>
+        </form>
+
         <div class="recent-list" id="recent-list"></div>
       </footer>
     </main>

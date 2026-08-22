@@ -14,6 +14,12 @@ Every check in this project costs something. Roughly, from cheapest to dearest:
 | A headless assertion script under Electron | low | logic: URL parsing, vault, layout maths, state |
 | Launching the app and reading its log | medium | wiring, IPC, crashes |
 | A screenshot | **high** (an image costs more than a page of text) | only genuinely visual work: shape, spacing, animation |
+
+Screenshots have their own trap: PowerShell is DPI-unaware by default, so
+`GetWindowRect` returns virtualised coordinates while `CopyFromScreen` captures
+physical pixels. On a 1.75x display that silently crops to the top-left ~57% of
+the window, which cost several rounds of chasing "missing" UI that was there all
+along. `SetProcessDPIAware()` first, always - `shot.ps1` and `click.ps1` both do.
 | `./build.sh` | highest (~60 s, 358 MB) | once, at the very end of a round |
 
 Rules that follow from that table:

@@ -44,8 +44,11 @@
    *   width     - the body's width in px, which sets how many lobes fit
    *   base      - the tallest a lobe may be, in px
    *   spacing   - px of width expected per lobe
+   *   minLobes  - floor on the count, for shapes that must not come out bald
    *   maxLobes  - ceiling on the count
    *   overhang  - fraction of the width lobes may spread past each edge
+   *   widthRatio- [min, max] of how much wider than tall a lobe runs. Long and
+   *               low reads as a streak of cloud; closer to 1 reads as puffy.
    *   className - class applied to each lobe
    */
   function buildLobes(element, seed, options) {
@@ -53,8 +56,10 @@
       width,
       base = 34,
       spacing = 90,
+      minLobes = 1,
       maxLobes = 3,
       overhang = 0,
+      widthRatio = [1.9, 3.4],
       className = 'lobe'
     } = options || {};
 
@@ -65,8 +70,8 @@
 
     // Width sets the ceiling; each cloud then draws somewhere between one lobe
     // and that many. Sparse is the point - every cloud keeps at least one.
-    const ceiling = Math.max(1, Math.min(maxLobes, Math.round(width / spacing)));
-    const count = 1 + Math.floor(random() * ceiling);
+    const ceiling = Math.max(minLobes, Math.min(maxLobes, Math.round(width / spacing)));
+    const count = minLobes + Math.floor(random() * (ceiling - minLobes + 1));
 
     // Where the tallest lobe sits, as a fraction of the width.
     const peak = 0.34 + random() * 0.3;
@@ -80,8 +85,8 @@
       // stay low. Without it, equal-height lobes merge into a slab.
       const falloff = Math.cos(Math.min(1, Math.abs(position - peak) * 1.35) * (Math.PI / 2)) ** 2.2;
       const height = Math.round(base * (0.3 + 0.62 * falloff) * (0.92 + random() * 0.16));
-      // Long, low lobes read as a drifting cloud; round ones read as bubbles.
-      const lobeWidth = Math.round(height * (1.9 + random() * 1.5));
+      const [ratioMin, ratioMax] = widthRatio;
+      const lobeWidth = Math.round(height * (ratioMin + random() * (ratioMax - ratioMin)));
 
       const lobe = document.createElement('span');
       lobe.className = className;
