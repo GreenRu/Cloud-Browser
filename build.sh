@@ -88,6 +88,9 @@ PACKAGER_ARGS=(
   --asar
   --prune
   --out="$OUT_DIR"
+)
+[ -f assets/icon.ico ] && PACKAGER_ARGS+=(--icon=assets/icon.ico)
+PACKAGER_ARGS+=(
   --ignore="^/(dist|CloudBrowser-win32-x64|\.git|.*\.sh|.*\.md)$"
 )
 [ -n "$PLATFORM" ] && PACKAGER_ARGS+=(--platform="$PLATFORM")

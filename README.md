@@ -165,6 +165,17 @@ is the [SignPath Foundation](https://signpath.org/apply), which requires an
 OSI-licensed, already-released, actively maintained public project — worth
 applying for once this is on GitHub with releases.
 
+## The icon
+
+```bash
+npm run icon
+```
+
+`assets/icon.ico` is generated, not hand-drawn: [tools/make-icon.ps1](tools/make-icon.ps1)
+renders the logo's own geometry at nine sizes from 16px to 256px and packs them
+into one file. Drawing each size rather than downsampling one bitmap is what
+keeps the 16px version legible in a taskbar.
+
 ## Opening files, and being the default browser
 
 ```bash

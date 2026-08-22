@@ -1,5 +1,6 @@
 'use strict';
 
+const fs = require('fs');
 const path = require('path');
 const { BrowserWindow, Menu, clipboard, shell, screen, nativeTheme } = require('electron');
 const { WebContentsView } = require('electron');
@@ -74,6 +75,7 @@ class BrowserShell {
     this.previewExpanding = false;
 
     const bounds = fitToScreen(store.get('window') || {});
+    const iconPath = path.join(__dirname, '..', '..', 'assets', 'icon.ico');
     const theme = THEME_CHROME[store.get('theme')] || THEME_CHROME.day;
 
     this.window = new BrowserWindow({
@@ -84,6 +86,8 @@ class BrowserShell {
       minWidth: 640,
       minHeight: 420,
       show: false,
+      // Only pass it when it exists: Electron throws on a missing icon path.
+      ...(fs.existsSync(iconPath) ? { icon: iconPath } : {}),
       backgroundColor: theme.color,
       titleBarStyle: 'hidden',
       titleBarOverlay: { color: theme.color, symbolColor: theme.symbol, height: TITLEBAR_HEIGHT },
