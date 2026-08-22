@@ -13,6 +13,15 @@ const PARTITION = 'persist:cloud';
 // strip and to the right of a default sidebar so the first paint is not wrong.
 const DEFAULT_INSETS = { left: 252, top: 40, right: 10, bottom: 10 };
 
+/**
+ * The thought bubble's live page preview.
+ *
+ * Switched off: the bubble still resolves where Enter would take you and says
+ * so, but nothing is fetched. The machinery below is intact and correct - flip
+ * this to true to bring the rendered preview back.
+ */
+const LIVE_PAGE_PREVIEW = false;
+
 // Must match --titlestrip-h and the top stop of the sky gradient in the
 // renderer stylesheet, so the OS-drawn window controls sit flush on the sky.
 const TITLEBAR_HEIGHT = 40;
@@ -318,6 +327,11 @@ class BrowserShell {
     const url = normalizeInput(input, this.store.get('searchEngine'), this.store.get('shortcuts'));
     if (!url) return this.hidePreview();
 
+    this.send('shell:preview-target', { url: prettifyUrl(url), live: LIVE_PAGE_PREVIEW });
+
+    // No view, no navigation, no request: the bubble is destination-only.
+    if (!LIVE_PAGE_PREVIEW) return;
+
     const view = this._ensurePreview();
     if (!this.previewAttached) {
       this.window.contentView.addChildView(view);
@@ -338,7 +352,6 @@ class BrowserShell {
       view.webContents.stop();
       view.webContents.loadURL(resolveLoadTarget(url)).catch(() => {});
     }
-    this.send('shell:preview-target', { url: prettifyUrl(url) });
   }
 
   hidePreview() {

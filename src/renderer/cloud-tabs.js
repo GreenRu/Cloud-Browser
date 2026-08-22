@@ -14,7 +14,7 @@
  */
 
 const TAB_HEIGHT = 34;
-const LOBE_SPACING = 110; // px of tab width each lobe is expected to cover
+const LOBE_SPACING = 90; // px of tab width one lobe is expected to cover
 
 function hashString(text) {
   let h = 2166136261;
@@ -40,10 +40,10 @@ function buildLobes(tabEl, id, width) {
   for (const old of tabEl.querySelectorAll('.lobe')) old.remove();
 
   const random = seededRandom(hashString(id));
-  // Width sets a sensible floor so a wide cloud is never bald, then each cloud
-  // draws its own number of lobes on top of that.
-  const floor = Math.max(2, Math.min(4, Math.round(width / LOBE_SPACING)));
-  const count = Math.min(6, floor + Math.floor(random() * 3));
+  // Width sets the ceiling; each cloud then draws somewhere between one lobe
+  // and that many. Sparse is the point - every cloud keeps at least one.
+  const ceiling = Math.max(1, Math.min(3, Math.round(width / LOBE_SPACING)));
+  const count = 1 + Math.floor(random() * ceiling);
 
   // Where the tallest lobe sits, as a fraction of the tab's width. The app
   // mark puts it right of centre; each cloud wanders a little either side.
@@ -124,10 +124,12 @@ class CloudTabStrip {
     });
 
     for (const [id, node] of this.nodes) {
-      if (!seen.has(id)) {
-        node.el.remove();
-        this.nodes.delete(id);
-      }
+      if (seen.has(id)) continue;
+      // Let the cloud deflate before it leaves the DOM.
+      this.nodes.delete(id);
+      node.el.classList.add('leaving');
+      node.el.addEventListener('transitionend', () => node.el.remove(), { once: true });
+      setTimeout(() => node.el.remove(), 400);
     }
 
     this.reflow();

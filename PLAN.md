@@ -81,10 +81,20 @@ Verify: one screenshot of the new tab page.
 A comic-book thought bubble hanging off the address bar while typing, with three
 small bubbles tapering between it and the field, idly breathing in size.
 
-Decided: **option (b)** — a real page rendered in the bubble, reloading as you
-type. Guards that keep it sane without breaking the rule: a load only starts
-when the resolved URL actually changes, the in-flight load is stopped first so
-pages cannot queue up, and space-only edits do not count as a character.
+Built as option (b), then **switched off at the connection**: `LIVE_PAGE_PREVIEW`
+in `src/main/shell.js` is `false`, so the bubble resolves and names the
+destination but nothing is fetched and no preview view is ever created. The
+machinery is intact — flip the flag to bring the rendered preview back.
+
+Building it surfaced a constraint worth remembering:
+
+> **The chrome renderer cannot draw over the page.** A tab is a
+> `WebContentsView`, a native child stacked above the window's own web
+> contents, so any HTML positioned over the page area is invisible behind it.
+> The bubble now lives inside the sidebar column for that reason.
+
+That same constraint is why phase 4's custom page context menu needs an overlay
+view rather than an HTML popup — budget for it there.
 
 - [x] Bubble shell, tail of three tapering circles, idle size animation.
 - [x] Destination resolution shown live, spaces excluded from triggering.

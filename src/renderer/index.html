@@ -35,6 +35,27 @@
         </button>
       </div>
 
+      <!-- Comic-book thought bubble. It lives inside the sidebar on purpose:
+           the page is a native view layered above this renderer, so anything
+           drawn over the page area would be hidden behind it. -->
+      <div class="thought" id="thought" hidden>
+        <span class="thought-puff thought-puff-1"></span>
+        <span class="thought-puff thought-puff-2"></span>
+        <span class="thought-puff thought-puff-3"></span>
+        <div class="thought-bubble">
+          <div class="thought-head">
+            <span class="thought-label" id="thought-label"></span>
+            <span class="thought-hint">Enter</span>
+          </div>
+          <div class="thought-screen" id="thought-screen">
+            <div class="thought-destination" id="thought-destination">
+              <svg viewBox="0 0 24 24" aria-hidden="true" class="thought-arrow"><path d="M5 12h13M13 6l6 6-6 6" /></svg>
+              <span id="thought-url"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="nav-row">
         <button class="tool-btn" id="back" title="Back (Alt+Left)" aria-label="Back">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>
@@ -86,25 +107,6 @@
 
       <div class="resizer" id="resizer" role="separator" aria-label="Resize sidebar" title="Drag to resize · double-click to collapse"></div>
     </aside>
-
-    <!-- Comic-book thought bubble: three tapering puffs rising from the address
-         bar into a panel whose interior is a live preview of the destination.
-         The panel is only a frame - the page inside it is a real view the main
-         process positions over this rect. -->
-    <div class="thought" id="thought" hidden>
-      <span class="thought-puff thought-puff-1"></span>
-      <span class="thought-puff thought-puff-2"></span>
-      <span class="thought-puff thought-puff-3"></span>
-      <div class="thought-bubble">
-        <div class="thought-head">
-          <span class="thought-label" id="thought-label"></span>
-          <span class="thought-hint">Enter to open</span>
-        </div>
-        <div class="thought-screen" id="thought-screen">
-          <div class="thought-loading"><span></span><span></span><span></span></div>
-        </div>
-      </div>
-    </div>
 
     <main class="main">
       <!-- Slim strip that exists so the window can be dragged and the OS can

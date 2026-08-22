@@ -38,6 +38,13 @@
   --page-radius: 16px;
   --gutter: 10px;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  /* Overshoots, then settles: the jelly. Use it for anything that appears,
+     grows, or is pressed. */
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --spring-big: cubic-bezier(0.22, 1.7, 0.36, 1);
+  --t-fast: 160ms;
+  --t-mid: 260ms;
+  --t-slow: 380ms;
 
   --ui-font: "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", sans-serif;
   --brand-font: "Comfortaa", var(--ui-font);
@@ -85,7 +92,20 @@ body {
   background: linear-gradient(180deg, var(--sky-top), var(--sky-bottom));
 }
 
-button { font: inherit; color: inherit; border: 0; background: none; padding: 0; cursor: pointer; }
+button {
+  font: inherit;
+  color: inherit;
+  border: 0;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  transition: background var(--t-fast) var(--ease), color var(--t-fast) var(--ease),
+    transform var(--t-mid) var(--spring), opacity var(--t-fast) var(--ease),
+    box-shadow var(--t-mid) var(--ease);
+}
+
+/* Pressing anything squashes it slightly, then it springs back. */
+button:active { transform: scale(0.92); }
 
 svg {
   width: 100%;
@@ -162,7 +182,7 @@ svg {
   transition: background 140ms linear, transform 140ms var(--ease);
 }
 
-.sky-btn:hover { background: rgba(255, 255, 255, 0.85); transform: translateY(-1px); }
+.sky-btn:hover { background: rgba(255, 255, 255, 0.85); transform: translateY(-2px) scale(1.08); }
 [data-theme="night"] .sky-btn:hover { background: rgba(255, 255, 255, 0.2); }
 .sky-btn:active { transform: translateY(0); }
 
@@ -180,8 +200,11 @@ svg {
   border-radius: 999px;
   background: var(--field);
   box-shadow: 0 1px 2px rgba(16, 44, 76, 0.10);
-  transition: box-shadow 160ms var(--ease), border-color 160ms var(--ease);
+  transition: box-shadow var(--t-mid) var(--ease), border-color var(--t-mid) var(--ease),
+    transform var(--t-slow) var(--spring);
 }
+
+.omnibox.focused { transform: scale(1.025); }
 
 .omnibox.focused {
   border-color: var(--accent);
@@ -220,7 +243,13 @@ svg {
 }
 
 .omni-btn:hover { background: rgba(127, 145, 168, 0.2); color: var(--text); }
-.omni-btn.on { color: #e5a50a; }
+.omni-btn.on { color: #e5a50a; animation: star-pop var(--t-slow) var(--spring-big); }
+
+@keyframes star-pop {
+  0% { transform: scale(0.6) rotate(-30deg); }
+  60% { transform: scale(1.25) rotate(8deg); }
+  100% { transform: none; }
+}
 .omni-btn.on svg { fill: currentColor; }
 
 /* ---------- nav row ---------- */
@@ -242,10 +271,12 @@ svg {
   border-radius: 50%;
   color: var(--text-on-sky);
   opacity: 0.85;
-  transition: background 120ms linear, opacity 120ms linear;
+  transition: background var(--t-fast) var(--ease), opacity var(--t-fast) var(--ease),
+    transform var(--t-mid) var(--spring);
 }
 
-.tool-btn:hover { background: var(--hover); opacity: 1; }
+.tool-btn:hover { background: var(--hover); opacity: 1; transform: scale(1.14); }
+.tool-btn:active { transform: scale(0.9); }
 .tool-btn:disabled { opacity: 0.28; cursor: default; background: none; }
 .tool-btn.small { width: 26px; height: 26px; padding: 5px; color: var(--text); }
 
@@ -291,14 +322,14 @@ svg {
   font-size: 11.5px;
   font-weight: 600;
   opacity: 0.7;
-  transition: opacity 140ms var(--ease), background 140ms var(--ease),
-    border-color 140ms var(--ease), transform 140ms var(--ease);
+  transition: opacity var(--t-fast) var(--ease), background var(--t-fast) var(--ease),
+    border-color var(--t-fast) var(--ease), transform var(--t-slow) var(--spring-big);
 }
 
 .new-cloud svg { width: 15px; height: 15px; flex: 0 0 auto; }
 .new-cloud:hover {
   opacity: 1;
-  transform: translateY(-1px);
+  transform: translateY(-2px) scale(1.02);
   background: var(--hover);
   border-color: transparent;
 }
@@ -318,9 +349,26 @@ svg {
   background: var(--cloud-idle);
   color: var(--text);
   cursor: default;
-  transition: background 160ms var(--ease), transform 160ms var(--ease);
+  transition: background var(--t-mid) var(--ease), transform var(--t-slow) var(--spring),
+    filter var(--t-mid) var(--ease), opacity var(--t-mid) var(--ease);
   filter: drop-shadow(0 1.5px 2px rgba(16, 44, 76, 0.18));
+  animation: cloud-in var(--t-slow) var(--spring-big) both;
 }
+
+@keyframes cloud-in {
+  from { opacity: 0; transform: translateX(-14px) scale(0.86); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Closing clouds deflate instead of blinking out. */
+.tab.leaving {
+  pointer-events: none;
+  opacity: 0;
+  transform: translateX(-10px) scale(0.8);
+  transition: opacity 180ms var(--ease), transform 180ms var(--ease);
+}
+
+.tab:hover:not(.active) { transform: translateX(3px); }
 
 [data-theme="night"] .tab { color: #a7bedb; }
 [data-theme="night"] .tab.active { color: #eaf2fd; }
@@ -329,7 +377,7 @@ svg {
 
 .tab.active {
   background: var(--cloud);
-  transform: translateX(2px);
+  transform: translateX(4px) scale(1.015);
   filter: drop-shadow(0 3px 6px rgba(16, 44, 76, 0.26));
 }
 
@@ -338,6 +386,8 @@ svg {
 .lobe {
   position: absolute;
   border-radius: 999px;
+  transition: width var(--t-slow) var(--spring), height var(--t-slow) var(--spring),
+    bottom var(--t-slow) var(--spring);
   background: inherit;
   transform: translateX(-50%);
   pointer-events: none;
@@ -399,12 +449,18 @@ svg {
   padding: 4px;
   border-radius: 50%;
   opacity: 0;
-  transition: opacity 120ms linear, background 120ms linear;
+  transition: opacity var(--t-fast) var(--ease), background var(--t-fast) var(--ease),
+    transform var(--t-mid) var(--spring);
 }
 
 .tab:hover .tab-close,
 .tab.active .tab-close { opacity: 0.55; }
-.tab-close:hover { opacity: 1; background: rgba(127, 145, 168, 0.3); }
+.tab-close:hover {
+  opacity: 1;
+  background: rgba(127, 145, 168, 0.3);
+  transform: translateY(-50%) scale(1.18) rotate(90deg);
+}
+.tab-close:active { transform: translateY(-50%) scale(0.9) rotate(90deg); }
 
 .sidebar-foot {
   flex: 0 0 auto;
@@ -481,27 +537,27 @@ svg {
 
 /* ---------- thought bubble ---------- */
 
+/* In the sidebar flow rather than floating over the page: the page is a native
+   view stacked above this renderer, so anything drawn over it is invisible.
+   Sitting in the column also means the bubble pushes the clouds down instead
+   of covering them. */
 .thought {
-  position: fixed;
-  left: calc(var(--sidebar-w, 252px) + 16px);
-  top: 96px;
-  z-index: 20;
-  width: min(560px, calc(100vw - var(--sidebar-w, 252px) - 40px));
+  position: relative;
+  flex: 0 0 auto;
+  margin: 30px 10px 2px;
   pointer-events: none;
-  animation: thought-in 260ms var(--ease) both;
+  animation: thought-in var(--t-slow) var(--spring-big) both;
 }
 
 .thought[hidden] { display: none; }
 
 @keyframes thought-in {
-  from { opacity: 0; transform: translate(-10px, -6px) scale(0.96); }
+  from { opacity: 0; transform: translateY(-14px) scale(0.9); }
   to { opacity: 1; transform: none; }
 }
 
-/* The tail: three puffs shrinking back toward the address bar, comic-book
-   fashion. They overlay the sidebar's right edge on purpose, so the bubble
-   reads as a thought coming out of the field. Each breathes on its own clock
-   so the tail never looks mechanical. */
+/* The tail: three puffs shrinking back up toward the address bar, comic-book
+   fashion. Each breathes on its own clock so it never looks mechanical. */
 .thought-puff {
   position: absolute;
   border-radius: 50%;
@@ -510,9 +566,9 @@ svg {
   animation: puff-breathe var(--dur) ease-in-out var(--delay) infinite alternate;
 }
 
-.thought-puff-1 { width: 8px;  height: 8px;  left: -58px; top: -32px; --dur: 2.6s; --delay: 0s; }
-.thought-puff-2 { width: 13px; height: 13px; left: -42px; top: -20px; --dur: 3.4s; --delay: -0.8s; }
-.thought-puff-3 { width: 20px; height: 20px; left: -22px; top: -6px;  --dur: 4.1s; --delay: -1.9s; }
+.thought-puff-1 { width: 7px;  height: 7px;  left: 10px; top: -25px; --dur: 2.6s; --delay: 0s; }
+.thought-puff-2 { width: 11px; height: 11px; left: 17px; top: -18px; --dur: 3.4s; --delay: -0.8s; }
+.thought-puff-3 { width: 17px; height: 17px; left: 26px; top: -10px; --dur: 4.1s; --delay: -1.9s; }
 
 @keyframes puff-breathe {
   from { transform: scale(0.78); }
@@ -522,19 +578,22 @@ svg {
 .thought-bubble {
   pointer-events: auto;
   border: 2px solid var(--bubble-line);
-  border-radius: 26px;
+  border-radius: 20px;
   background: var(--bubble);
-  box-shadow: 0 18px 44px rgba(16, 44, 76, 0.28);
+  box-shadow: 0 12px 30px rgba(16, 44, 76, 0.24);
   overflow: hidden;
 }
 
 .thought-head {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 9px 14px;
+  gap: 8px;
+  padding: 7px 12px;
   border-bottom: 1px solid var(--frame-line, rgba(15, 23, 42, 0.1));
 }
+
+/* With no page to preview, the head would just repeat the destination. */
+.thought.compact .thought-head { display: none; }
 
 .thought-label {
   flex: 1 1 auto;
@@ -558,26 +617,45 @@ svg {
   letter-spacing: 0.3px;
 }
 
-/* Placeholder the live preview view is positioned over. */
+/* Placeholder the live preview view is positioned over when it is enabled. */
 .thought-screen {
   position: relative;
-  height: 300px;
+  height: 260px;
   display: grid;
   place-items: center;
+  overflow: hidden;
   background: var(--stage);
+  transition: height var(--t-slow) var(--spring);
 }
 
-.thought-loading { display: flex; gap: 6px; }
-.thought-loading span {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--text-dim);
-  opacity: 0.5;
-  animation: puff-breathe 900ms ease-in-out infinite alternate;
+/* Destination only: nothing is fetched, so the bubble shrinks to fit. */
+.thought.compact .thought-screen { height: auto; background: transparent; }
+
+.thought-destination {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  max-width: 100%;
+  padding: 11px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
 }
-.thought-loading span:nth-child(2) { animation-delay: 150ms; }
-.thought-loading span:nth-child(3) { animation-delay: 300ms; }
+
+.thought-destination span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.thought-arrow {
+  flex: 0 0 auto;
+  width: 15px;
+  height: 15px;
+  color: var(--accent);
+  animation: nudge 1.5s var(--ease) infinite alternate;
+}
+
+@keyframes nudge {
+  from { transform: translateX(-3px); }
+  to { transform: translateX(3px); }
+}
 
 /* ---------- main column ---------- */
 
@@ -640,6 +718,12 @@ svg {
   background: var(--panel);
   backdrop-filter: blur(12px);
   font-size: 12.5px;
+  animation: drawer-in var(--t-slow) var(--spring-big) both;
+}
+
+@keyframes drawer-in {
+  from { opacity: 0; transform: translateY(-14px) scale(0.97); }
+  to { opacity: 1; transform: none; }
 }
 
 .drawer[hidden] { display: none; }
@@ -681,7 +765,7 @@ svg {
   transition: background 120ms linear;
 }
 
-.bookmark:hover { background: rgba(255, 255, 255, 0.9); }
+.bookmark:hover { background: rgba(255, 255, 255, 0.9); transform: translateY(-2px); }
 [data-theme="night"] .bookmark:hover { background: rgba(255, 255, 255, 0.18); }
 .bookmark span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -738,6 +822,7 @@ svg {
   justify-content: center;
   gap: 16px;
   background: var(--stage);
+  transition: margin var(--t-slow) var(--spring), border-radius var(--t-mid) var(--ease);
 }
 
 .stage-cloud {

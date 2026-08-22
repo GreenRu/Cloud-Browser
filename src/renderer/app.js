@@ -47,7 +47,8 @@ const el = {
   stage: $('stage'),
   thought: $('thought'),
   thoughtLabel: $('thought-label'),
-  thoughtScreen: $('thought-screen')
+  thoughtScreen: $('thought-screen'),
+  thoughtUrl: $('thought-url')
 };
 
 const BADGE_SECURE =
@@ -456,8 +457,11 @@ api.on.focusOmnibox(() => {
 });
 api.on.openFind(openFind);
 api.on.savePassword(showSavePassword);
-api.on.previewTarget(({ url }) => {
+api.on.previewTarget(({ url, live }) => {
   el.thoughtLabel.textContent = url;
+  el.thoughtUrl.textContent = url;
+  // Without a rendered page the bubble has nothing to fill 300px with.
+  el.thought.classList.toggle('compact', !live);
 });
 api.on.findResult(({ matches, current }) => {
   el.findCount.textContent = `${matches ? current : 0}/${matches || 0}`;
