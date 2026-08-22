@@ -53,7 +53,7 @@ function buildAppMenu(getShell) {
         {
           label: 'Settings',
           accelerator: 'CommandOrControl+,',
-          click: withShell((s) => s.newTab('cloud://settings'))
+          click: withShell((s) => s.newTab('stratus://settings'))
         },
         { type: 'separator' },
         { role: 'quit', label: 'Exit' }
@@ -163,12 +163,12 @@ function buildAppMenu(getShell) {
         {
           label: 'Show All History',
           accelerator: 'CommandOrControl+H',
-          click: withShell((s) => s.newTab('cloud://history'))
+          click: withShell((s) => s.newTab('stratus://history'))
         },
         {
           label: 'Show Bookmarks',
           accelerator: 'CommandOrControl+Shift+O',
-          click: withShell((s) => s.newTab('cloud://bookmarks'))
+          click: withShell((s) => s.newTab('stratus://bookmarks'))
         },
         {
           label: 'Bookmark This Page',
@@ -186,7 +186,7 @@ function buildAppMenu(getShell) {
       label: 'Help',
       submenu: [
         {
-          label: 'Cloud Browser on the Web',
+          label: 'Stratus on the Web',
           click: () => shell.openExternal('https://www.electronjs.org/docs/latest')
         }
       ]
@@ -213,9 +213,9 @@ function popupToolsMenu(shellRef, x, y) {
         shellRef._broadcast();
       }
     },
-    { label: 'Bookmarks', accelerator: 'Ctrl+Shift+O', click: () => shellRef.newTab('cloud://bookmarks') },
-    { label: 'History', accelerator: 'Ctrl+H', click: () => shellRef.newTab('cloud://history') },
-    { label: 'Settings', accelerator: 'Ctrl+,', click: () => shellRef.newTab('cloud://settings') },
+    { label: 'Bookmarks', accelerator: 'Ctrl+Shift+O', click: () => shellRef.newTab('stratus://bookmarks') },
+    { label: 'History', accelerator: 'Ctrl+H', click: () => shellRef.newTab('stratus://history') },
+    { label: 'Settings', accelerator: 'Ctrl+,', click: () => shellRef.newTab('stratus://settings') },
     { type: 'separator' },
     { label: 'Zoom in', accelerator: 'Ctrl+=', click: () => tab?.setZoom(0.5) },
     { label: 'Zoom out', accelerator: 'Ctrl+-', click: () => tab?.setZoom(-0.5) },

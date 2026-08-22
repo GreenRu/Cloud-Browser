@@ -472,7 +472,7 @@ class BrowserShell {
 
   hidePreview() {
     if (!this.previewAttached || !this.previewView) return;
-    if (!this.previewView.webContents.isDestroyed()) {
+    if (!this.previewView.webContents.isDestroyed() && !this.window.isDestroyed()) {
       this.previewView.webContents.stop();
       this.previewView.setVisible(false);
     }
@@ -483,7 +483,9 @@ class BrowserShell {
   destroyPreview() {
     this.hidePreview();
     if (this.previewView && !this.previewView.webContents.isDestroyed()) {
-      this.window.contentView.removeChildView(this.previewView);
+      // This also runs from 'closed', by which point the window and its
+      // contentView are already gone.
+      if (!this.window.isDestroyed()) this.window.contentView.removeChildView(this.previewView);
       this.previewView.webContents.close();
     }
     this.previewView = null;

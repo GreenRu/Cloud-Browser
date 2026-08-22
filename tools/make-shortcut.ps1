@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Creates a desktop shortcut that launches Cloud Browser without packaging it.
+  Creates a desktop shortcut that launches Stratus without packaging it.
 
 .DESCRIPTION
   Windows 11's Smart App Control blocks executables that are both unsigned and
@@ -21,7 +21,7 @@
 
 [CmdletBinding()]
 param(
-    [string]$Name = 'Cloud Browser',
+    [string]$Name = 'Stratus',
     [string]$Destination = [Environment]::GetFolderPath('Desktop')
 )
 
@@ -41,7 +41,7 @@ $shortcut = $shell.CreateShortcut($linkPath)
 $shortcut.TargetPath = $electron
 $shortcut.Arguments = "`"$projectRoot`""
 $shortcut.WorkingDirectory = $projectRoot
-$shortcut.Description = 'Cloud Browser'
+$shortcut.Description = 'Stratus'
 
 # Use the app's own icon when one has been added to assets\.
 $icon = Join-Path $projectRoot 'assets\icon.ico'

@@ -123,7 +123,7 @@ function render(next) {
  * copying still work on the real thing.
  */
 function displayUrl(tab) {
-  if (!tab?.url || tab.url === 'cloud://newtab') return '';
+  if (!tab?.url || tab.url === 'stratus://newtab') return '';
   if (state.showFullUrl) return tab.url;
   return hostOnly(tab.url);
 }
@@ -150,7 +150,7 @@ function renderBadge(url) {
     el.badge.title = 'Connection is not secure';
   } else {
     el.badge.innerHTML = BADGE_INTERNAL;
-    el.badge.title = 'Cloud Browser page';
+    el.badge.title = 'Stratus page';
   }
 }
 
@@ -346,7 +346,7 @@ el.address.addEventListener('focus', () => {
   // Edit the real address, not the trimmed one on display.
   if (!state.showFullUrl && !omniDirty) {
     const tab = activeTab();
-    if (tab?.url && tab.url !== 'cloud://newtab') el.address.value = tab.url;
+    if (tab?.url && tab.url !== 'stratus://newtab') el.address.value = tab.url;
   }
   // Select-all belongs to the user's first focus only. The preview bounces
   // focus back here as it attaches, and re-selecting then means the next
@@ -403,7 +403,7 @@ el.reload.addEventListener('click', () => {
 });
 el.bookmark.addEventListener('click', () => api.bookmarks.toggle());
 el.findOpen.addEventListener('click', () => openFind());
-el.settings.addEventListener('click', () => api.tabs.create('cloud://settings'));
+el.settings.addEventListener('click', () => api.tabs.create('stratus://settings'));
 el.theme.addEventListener('click', () => {
   api.view.setTheme(state.theme === 'night' ? 'day' : 'night');
 });

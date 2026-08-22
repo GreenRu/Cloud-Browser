@@ -7,7 +7,7 @@ const { DEFAULT_SHORTCUTS } = require('./urls');
 
 const DEFAULTS = {
   theme: 'day',                       // 'day' | 'night'
-  homepage: 'cloud://newtab',
+  homepage: 'stratus://newtab',
   searchEngine: 'google',
   shortcuts: { ...DEFAULT_SHORTCUTS },
   savePasswords: true,
@@ -36,6 +36,16 @@ class Store {
     try {
       const raw = fs.readFileSync(this.file, 'utf8');
       const data = { ...structuredClone(DEFAULTS), ...JSON.parse(raw) };
+      // The internal scheme was renamed with the app; saved state predates it.
+      if (typeof data.homepage === 'string') {
+        data.homepage = data.homepage.replace(/^cloud:\/\//, 'stratus://');
+      }
+      if (Array.isArray(data.session)) {
+        data.session = data.session.map((url) =>
+          typeof url === 'string' ? url.replace(/^cloud:\/\//, 'stratus://') : url
+        );
+      }
+
       // Drop anything a previous version recorded that is not a web page.
       data.history = (data.history || []).filter((e) => e && /^https?:\/\//i.test(e.url));
       data.bookmarks = (data.bookmarks || []).filter((b) => b && /^https?:\/\//i.test(b.url));

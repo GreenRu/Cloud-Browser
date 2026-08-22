@@ -128,7 +128,7 @@ function renderVaultState() {
   warning.hidden = settings.encryptionAvailable;
   if (!settings.encryptionAvailable) {
     warning.textContent =
-      'This system has no keystore Cloud Browser can use, so passwords will not be saved. ' +
+      'This system has no keystore Stratus can use, so passwords will not be saved. ' +
       'Nothing is ever written to disk unencrypted.';
   }
 

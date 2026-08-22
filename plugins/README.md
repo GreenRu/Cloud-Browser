@@ -22,7 +22,7 @@ The pieces it will hook into already exist:
   plugins can contribute commands and accelerators in one place.
 - `src/main/store.js` takes arbitrary keys, so plugin settings can persist
   without a new storage layer.
-- `src/main/urls.js` maps `cloud://` aliases to pages, which is how a plugin
+- `src/main/urls.js` maps `stratus://` aliases to pages, which is how a plugin
   would register its own settings page.
 
 Plugin code must not get the renderer's IPC bridge or Node access in a web

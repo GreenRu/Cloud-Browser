@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Build Cloud Browser into a distributable app folder.
+# Build Stratus into a distributable app folder.
 #
 #   ./build.sh                    build for this machine
 #   ./build.sh --platform win32 --arch x64
@@ -12,7 +12,7 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 
-APP_NAME="Cloud Browser"
+APP_NAME="Stratus"
 OUT_DIR="dist"
 PLATFORM=""
 ARCH=""

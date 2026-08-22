@@ -27,7 +27,7 @@ document.getElementById('retry').addEventListener('click', () => {
 });
 
 document.getElementById('home').addEventListener('click', () => {
-  bridge?.navigate('cloud://newtab');
+  bridge?.navigate('stratus://newtab');
 });
 
 if (bridge) {

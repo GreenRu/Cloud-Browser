@@ -1,4 +1,4 @@
-# Cloud Browser
+# Stratus
 
 A small desktop web browser built on Electron. One sky fills the window, every
 tab is a cloud drifting down the left edge, and the page floats on it as a
@@ -8,6 +8,11 @@ single rounded card — there is no toolbar band across the top.
 npm install
 npm start
 ```
+
+> Renamed from *Cloud Browser*. The profile is carried over automatically on
+> first launch — including `Local State`, without which every saved password
+> would be unreadable ciphertext — and stored `cloud://` addresses are rewritten
+> to `stratus://`.
 
 ## What it does
 
@@ -25,7 +30,7 @@ npm start
   YouTube. Eleven ship by default (`g gt yt gh w mdn so npm ddg maps img`) and
   you can add your own in Settings, where `%s` marks the query.
 - **Saved passwords**, encrypted with the OS keystore — see below.
-- **Settings page** at `cloud://settings` (`Ctrl+,`) for the search engine,
+- **Settings page** at `stratus://settings` (`Ctrl+,`) for the search engine,
   home page, theme, address-bar display, shortcuts, saved logins and clearing
   history.
 - **Trimmed addresses** (optional): the bar can show just the site —
@@ -70,7 +75,7 @@ src/
     tab.js       one tab = one WebContentsView + its presentation state
     menu.js      application menu (the keyboard map) and the toolbar menu
     store.js     JSON preferences, bookmarks, history in the user-data dir
-    urls.js      URL vs. search parsing, shortcuts, cloud:// page routing
+    urls.js      URL vs. search parsing, shortcuts, stratus:// page routing
     passwords.js the encrypted login vault
   preload/
     chrome.js    context bridge for the browser UI
@@ -150,7 +155,7 @@ For running it on your own machine, skip packaging and make a shortcut:
 npm run shortcut
 ```
 
-That puts a *Cloud Browser* shortcut on the desktop which launches the app
+That puts a *Stratus* shortcut on the desktop which launches the app
 through `node_modules/electron/dist/electron.exe` — an unsigned binary too, but
 one whose hash is on millions of machines, so it has reputation and runs. No
 security setting is weakened, and deleting the shortcut undoes it.

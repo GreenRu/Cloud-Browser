@@ -10,11 +10,11 @@ const SEARCH_ENGINES = {
 };
 
 const INTERNAL_PAGES = {
-  'cloud://newtab': path.join(__dirname, '..', 'pages', 'newtab.html'),
-  'cloud://history': path.join(__dirname, '..', 'pages', 'history.html'),
-  'cloud://bookmarks': path.join(__dirname, '..', 'pages', 'bookmarks.html'),
-  'cloud://settings': path.join(__dirname, '..', 'pages', 'settings.html'),
-  'cloud://passwords': path.join(__dirname, '..', 'pages', 'settings.html')
+  'stratus://newtab': path.join(__dirname, '..', 'pages', 'newtab.html'),
+  'stratus://history': path.join(__dirname, '..', 'pages', 'history.html'),
+  'stratus://bookmarks': path.join(__dirname, '..', 'pages', 'bookmarks.html'),
+  'stratus://settings': path.join(__dirname, '..', 'pages', 'settings.html'),
+  'stratus://passwords': path.join(__dirname, '..', 'pages', 'settings.html')
 };
 
 /**
@@ -79,13 +79,13 @@ function normalizeInput(input, engineKey = 'google', shortcuts = DEFAULT_SHORTCU
   return engine.query.replace('%s', encodeURIComponent(text));
 }
 
-/** Map a `cloud://` alias to the packaged HTML file that implements it. */
+/** Map a `stratus://` alias to the packaged HTML file that implements it. */
 function resolveLoadTarget(url) {
   const file = INTERNAL_PAGES[url];
   return file ? pathToFileURL(file).toString() : url;
 }
 
-/** Inverse of resolveLoadTarget, so the URL bar shows `cloud://newtab`. */
+/** Inverse of resolveLoadTarget, so the URL bar shows `stratus://newtab`. */
 function prettifyUrl(url) {
   for (const [alias, file] of Object.entries(INTERNAL_PAGES)) {
     if (url === pathToFileURL(file).toString()) return alias;
@@ -94,11 +94,11 @@ function prettifyUrl(url) {
 }
 
 const INTERNAL_TITLES = {
-  'cloud://newtab': 'New Tab',
-  'cloud://history': 'History',
-  'cloud://bookmarks': 'Bookmarks',
-  'cloud://settings': 'Settings',
-  'cloud://passwords': 'Settings'
+  'stratus://newtab': 'New Tab',
+  'stratus://history': 'History',
+  'stratus://bookmarks': 'Bookmarks',
+  'stratus://settings': 'Settings',
+  'stratus://passwords': 'Settings'
 };
 
 /** Short, human-readable label for a URL — used for tab titles and the omnibox. */

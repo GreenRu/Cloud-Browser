@@ -1,11 +1,46 @@
 'use strict';
 
 const { app, ipcMain, session, shell, Menu, dialog, nativeTheme } = require('electron');
+const fs = require('fs');
+const path = require('path');
 const { Store } = require('./store');
 const { BrowserShell, PARTITION } = require('./shell');
 const { PasswordVault } = require('./passwords');
 const { DEFAULT_SHORTCUTS, SEARCH_ENGINES, normalizeInput, prettifyUrl } = require('./urls');
 const { buildAppMenu, popupToolsMenu } = require('./menu');
+
+/*
+ * The app's name decides where its profile lives, so it has to be set before
+ * anything reads a path - and before app-ready, because Chromium's OSCrypt
+ * takes its encryption key from "Local State" inside that directory as it
+ * initialises. Setting it later would leave saved passwords undecryptable.
+ */
+const APP_NAME = 'Stratus';
+const PREVIOUS_NAME = 'Cloud Browser';
+app.setName(APP_NAME);
+
+/**
+ * Carry the profile over from the old name, once.
+ *
+ * The whole directory is copied, "Local State" included: that file holds the
+ * key the saved passwords were encrypted with, so leaving it behind would turn
+ * every stored login into unreadable ciphertext.
+ */
+function migrateProfile() {
+  try {
+    const appData = app.getPath('appData');
+    const next = path.join(appData, APP_NAME);
+    const previous = path.join(appData, PREVIOUS_NAME);
+    if (fs.existsSync(next) || !fs.existsSync(previous)) return;
+    fs.cpSync(previous, next, { recursive: true });
+    console.log(`[stratus] carried the profile over from "${PREVIOUS_NAME}"`);
+  } catch (err) {
+    // A fresh profile is a worse outcome than a slow start, but not a fatal one.
+    console.error('[stratus] could not migrate the old profile:', err.message);
+  }
+}
+
+migrateProfile();
 
 // One window per launch for now; the array leaves room for multi-window later.
 /** @type {BrowserShell[]} */
@@ -224,7 +259,7 @@ if (!app.requestSingleInstanceLock()) {
   });
 
   app.whenReady().then(() => {
-    app.setAppUserModelId('com.cloudbrowser.app');
+    app.setAppUserModelId('com.stratus.browser');
     store = new Store();
     vault = new PasswordVault();
     nativeTheme.themeSource = store.get('theme') === 'night' ? 'dark' : 'light';
@@ -252,7 +287,7 @@ if (!app.requestSingleInstanceLock()) {
 process.on('uncaughtException', (err) => {
   console.error('[main] uncaught exception:', err);
   if (app.isReady()) {
-    dialog.showErrorBox('Cloud Browser hit a problem', String(err?.stack || err));
+    dialog.showErrorBox('Stratus hit a problem', String(err?.stack || err));
   }
 });
 
