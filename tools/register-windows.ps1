@@ -62,7 +62,13 @@ function Remove-Key($path) {
     if (Test-Path $path) { Remove-Item $path -Recurse -Force }
 }
 
+$startMenu = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs'
+$shortcutPath = Join-Path $startMenu "$AppName.lnk"
+$uninstallKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\$AppName"
+
 if ($Unregister) {
+    if (Test-Path $shortcutPath) { Remove-Item $shortcutPath -Force }
+    Remove-Key $uninstallKey
     Remove-Key "HKCU:\$ClientKey"
     Remove-Key "HKCU:\Software\Classes\$ProgIdHtml"
     Remove-Key "HKCU:\Software\Classes\$ProgIdUrl"
@@ -77,7 +83,7 @@ if ($Unregister) {
             Remove-ItemProperty -Path $openWith -Name $ProgIdHtml -ErrorAction SilentlyContinue
         }
     }
-    Write-Output "Unregistered $AppName."
+    Write-Output "Unregistered $AppName, and removed its Start menu entry."
     return
 }
 
@@ -161,6 +167,44 @@ foreach ($scheme in @('http', 'https', 'stratus')) {
 New-Item -Path 'HKCU:\Software\RegisteredApplications' -Force | Out-Null
 Set-ItemProperty -Path 'HKCU:\Software\RegisteredApplications' -Name $AppName -Value $CapabilityPath
 
+# --- make Windows consider it installed --------------------------------------
+#
+# The registry above is what Windows reads once it is already looking at
+# Stratus. It is not what makes Windows look: the Default apps page lists
+# *installed* applications, and something with no Start menu entry and no
+# entry under Installed apps is not one. Every browser on this machine has
+# both, which is why they appear and a registry-only registration does not.
+
+$wsh = New-Object -ComObject WScript.Shell
+$link = $wsh.CreateShortcut($shortcutPath)
+if ($Exe) {
+    $link.TargetPath = $Exe
+} else {
+    $link.TargetPath = $electron
+    $link.Arguments = "`"$projectRoot`""
+}
+$link.WorkingDirectory = $projectRoot
+$link.Description = 'A small web browser with cloud-shaped tabs'
+$iconFile = Join-Path $projectRoot 'assets\icon.ico'
+if (Test-Path $iconFile) { $link.IconLocation = $iconFile }
+$link.Save()
+
+$version = '0.2.0'
+try {
+    $version = (Get-Content (Join-Path $projectRoot 'package.json') -Raw | ConvertFrom-Json).version
+} catch { }
+
+New-Item -Path $uninstallKey -Force | Out-Null
+Set-ItemProperty -Path $uninstallKey -Name 'DisplayName' -Value $AppName
+Set-ItemProperty -Path $uninstallKey -Name 'DisplayIcon' -Value $icon
+Set-ItemProperty -Path $uninstallKey -Name 'DisplayVersion' -Value $version
+Set-ItemProperty -Path $uninstallKey -Name 'Publisher' -Value 'Sutton Sager'
+Set-ItemProperty -Path $uninstallKey -Name 'InstallLocation' -Value $projectRoot
+Set-ItemProperty -Path $uninstallKey -Name 'UninstallString' `
+    -Value "powershell -ExecutionPolicy Bypass -File `"$PSCommandPath`" -Unregister"
+Set-ItemProperty -Path $uninstallKey -Name 'NoModify' -Value 1 -Type DWord
+Set-ItemProperty -Path $uninstallKey -Name 'NoRepair' -Value 1 -Type DWord
+
 # Settings caches the app list; nudge the shell so the entry shows up now.
 $sig = 'using System;using System.Runtime.InteropServices;public class Shell32Notify{[DllImport("shell32.dll")]public static extern void SHChangeNotify(int e,uint f,IntPtr a,IntPtr b);}'
 if (-not ([System.Management.Automation.PSTypeName]'Shell32Notify').Type) { Add-Type -TypeDefinition $sig }
@@ -172,6 +216,7 @@ if (-not $Quiet) {
     Write-Output "  launches:      $launch"
     Write-Output "  opens a file:  $openOne"
     Write-Output "  file types:    $($FileTypes.Count)"
+    Write-Output "  start menu:    $shortcutPath"
     Write-Output ''
     Write-Output 'Windows does not let an app make itself the default. To finish:'
     Write-Output '  Settings > Apps > Default apps, search "Stratus", then set http, https and .html'

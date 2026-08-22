@@ -187,6 +187,12 @@ be offered as a *browser* it has to live under
 is how Edge and Firefox are registered, and the script mirrors their shape
 key for key.
 
+That alone still is not enough. The Default apps page lists *installed*
+applications, so the script also creates a Start menu shortcut and an entry
+under Installed apps — the two things that make Windows consider a program
+installed at all. Every browser on this machine has both; a registry-only
+registration is invisible to that page.
+
 Twenty-two file types are claimed, all of them things Chromium can genuinely
 display: `.html`, `.svg`, `.pdf`, `.txt`, `.json`, `.xml` and the common image
 formats. Word documents are deliberately not among them — Chromium cannot
