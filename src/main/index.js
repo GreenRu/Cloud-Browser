@@ -84,6 +84,14 @@ function registerIpc() {
   ipcMain.on('preview:show', withShell((s, input, rect, viewport) => s.showPreview(input, rect, viewport)));
   ipcMain.on('preview:hide', withShell((s) => s.hidePreview()));
 
+  ipcMain.on('preview:activate', (event) => {
+    const shellRef = currentShell();
+    // Only the preview view may ask for this, never a browsed page.
+    if (!shellRef || !shellRef.previewView) return;
+    if (event.sender !== shellRef.previewView.webContents) return;
+    shellRef.activatePreview();
+  });
+
   ipcMain.on('find:query', withShell((s, query, opts) => s.find(query, opts)));
   ipcMain.on('find:stop', withShell((s) => s.stopFind()));
 

@@ -71,6 +71,7 @@ class BrowserShell {
     this.previewView = null;
     this.previewAttached = false;
     this.previewUrl = null;
+    this.previewExpanding = false;
 
     const bounds = fitToScreen(store.get('window') || {});
     const theme = THEME_CHROME[store.get('theme')] || THEME_CHROME.day;
@@ -316,6 +317,7 @@ class BrowserShell {
     this.previewView = new WebContentsView({
       webPreferences: {
         partition: PARTITION,
+        preload: path.join(__dirname, '..', 'preload', 'preview.js'),
         contextIsolation: true,
         nodeIntegration: false,
         sandbox: true,
@@ -375,6 +377,7 @@ class BrowserShell {
     if (!this.previewAttached) {
       // Only a visibility flip here: adding or re-adding a view steals native
       // focus, and this runs while the user is typing.
+      view.setBorderRadius?.(PREVIEW_RADIUS);
       view.setVisible(true);
       this.previewAttached = true;
     }
@@ -393,6 +396,78 @@ class BrowserShell {
       view.webContents.stop();
       view.webContents.loadURL(resolveLoadTarget(url)).catch(() => {});
     }
+  }
+
+  /** The rect the page view occupies - what the bubble expands into. */
+  _stageBounds() {
+    const [width, height] = this.window.getContentSize();
+    const { left, top, right, bottom } = this.insets;
+    return {
+      x: left,
+      y: top,
+      width: Math.max(0, width - left - right),
+      height: Math.max(0, height - top - bottom)
+    };
+  }
+
+  /**
+   * A press on the preview opens it: the bubble grows into the page area, then
+   * the real tab takes over at the same size, so the swap is invisible.
+   */
+  activatePreview() {
+    if (!this.previewAttached || !this.previewView || !this.previewUrl) return;
+    if (this.previewExpanding) return;
+
+    this.previewExpanding = true;
+    const url = this.previewUrl;
+    const from = this.previewView.getBounds();
+    const to = this._stageBounds();
+    const started = Date.now();
+    const DURATION = 240;
+
+    this.send('shell:preview-expanding');
+
+    const step = () => {
+      if (!this.previewAttached || !this.previewView || this.window.isDestroyed()) {
+        this.previewExpanding = false;
+        return;
+      }
+      const t = Math.min(1, (Date.now() - started) / DURATION);
+      const eased = 1 - Math.pow(1 - t, 3);
+      const lerp = (a, b) => Math.round(a + (b - a) * eased);
+      this.previewView.setBounds({
+        x: lerp(from.x, to.x),
+        y: lerp(from.y, to.y),
+        width: lerp(from.width, to.width),
+        height: lerp(from.height, to.height)
+      });
+      this.previewView.setBorderRadius?.(Math.round(PREVIEW_RADIUS * (1 - eased)));
+
+      if (t < 1) return setTimeout(step, 16);
+      this._commitPreview(url);
+    };
+
+    step();
+  }
+
+  /** Hand the previewed page over to the real tab and drop the preview. */
+  _commitPreview(url) {
+    const tab = this.activeTab;
+    if (!tab) {
+      this.newTab(url);
+      this.previewExpanding = false;
+      this.hidePreview();
+      return;
+    }
+
+    tab.loadURL(url);
+    const finish = () => {
+      this.previewExpanding = false;
+      this.hidePreview();
+    };
+    tab.webContents.once('did-stop-loading', finish);
+    // The tab may never settle; do not leave the preview parked over it.
+    setTimeout(finish, 4000);
   }
 
   hidePreview() {

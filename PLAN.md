@@ -102,6 +102,16 @@ Two constraints came out of building it, both worth remembering:
 > the renderer must check where focus actually *is* before acting on a blur
 > rather than trusting that it left.
 
+> **Synthetic events do not exercise the real input path.** A dispatched
+> `MouseEvent` skips the pointer path entirely, so a suite can pass green while
+> real clicks do nothing. Two traps found this way: `preventDefault()` on a
+> `pointerdown` cancels the compatibility `mousedown`/`click` that follow, and
+> `sendInputEvent` never reaches a non-focused child view of a `BrowserWindow`.
+> Pointer behaviour has to be checked with a real OS click. `clickprobe.js` +
+> `click.ps1` in the scratchpad do that: the app prints its own target in
+> physical pixels, and the clicker calls `SetProcessDPIAware()` first so the
+> coordinates it is handed are the ones it uses.
+
 Phase 4's custom page context menu needs the same overlay treatment — budget
 for it there.
 

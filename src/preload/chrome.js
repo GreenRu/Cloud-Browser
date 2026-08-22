@@ -78,6 +78,7 @@ contextBridge.exposeInMainWorld('cloud', {
     focusOmnibox: listen('shell:focus-omnibox'),
     openFind: listen('shell:open-find'),
     savePassword: listen('shell:save-password'),
-    previewTarget: listen('shell:preview-target')
+    previewTarget: listen('shell:preview-target'),
+    previewExpanding: listen('shell:preview-expanding')
   }
 });

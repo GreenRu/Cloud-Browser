@@ -298,12 +298,12 @@ el.thought.addEventListener('animationend', () => {
   if (!el.thought.hidden && lastPreviewKey) sendPreview(lastPreviewKey);
 });
 
-function hideThought() {
+function hideThought({ notifyMain = true } = {}) {
   clearTimeout(previewTimer);
   if (el.thought.hidden) return;
   el.thought.hidden = true;
   lastPreviewKey = '';
-  api.preview.hide();
+  if (notifyMain) api.preview.hide();
 }
 
 // ---------------------------------------------------------------- omnibox
@@ -497,6 +497,15 @@ api.on.focusOmnibox(() => {
 });
 api.on.openFind(openFind);
 api.on.savePassword(showSavePassword);
+// The preview is growing into the page area; the frame would only be in its
+// way. Main owns the view from here, so do not ask it to hide anything.
+api.on.previewExpanding(() => {
+  clearTimeout(blurTimer);
+  omniDirty = false;
+  hideThought({ notifyMain: false });
+  el.address.blur();
+});
+
 api.on.previewTarget(({ url, live }) => {
   el.thoughtLabel.textContent = url;
   el.thoughtUrl.textContent = url;
