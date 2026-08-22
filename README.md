@@ -165,6 +165,31 @@ is the [SignPath Foundation](https://signpath.org/apply), which requires an
 OSI-licensed, already-released, actively maintained public project — worth
 applying for once this is on GitHub with releases.
 
+## Opening files, and being the default browser
+
+```bash
+npm run register     # publish Stratus to Windows
+npm run unregister   # take it back out
+```
+
+Windows has not let an application make itself the default since Windows 10
+1803 — that is the user's choice alone. Registering publishes what Stratus can
+open, which makes it appear in **Settings → Apps → Default apps**, where you
+assign `http`, `https` and whichever file types you want. Everything is written
+under `HKEY_CURRENT_USER`, so it needs no administrator rights and touches no
+other account.
+
+Twenty-two file types are claimed, all of them things Chromium can genuinely
+display: `.html`, `.svg`, `.pdf`, `.txt`, `.json`, `.xml` and the common image
+formats. Word documents are deliberately not among them — Chromium cannot
+render `.doc` or `.docx`, which is why Edge hands those to Office rather than
+opening them itself.
+
+Smart App Control is not an obstacle here. It blocks a freshly *packaged*
+build, but the registration points at the same Electron binary the shortcut
+uses, which has reputation and runs — verified by opening a file through the
+registered handler with no Code Integrity block logged.
+
 ## Plugins
 
 `plugins/` is reserved for the plugin system and is not loaded yet; see

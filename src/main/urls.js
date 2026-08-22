@@ -1,6 +1,7 @@
 'use strict';
 
 const path = require('path');
+const fs = require('fs');
 const { pathToFileURL } = require('url');
 
 const SEARCH_ENGINES = {
@@ -113,8 +114,36 @@ function hostLabel(url) {
   }
 }
 
+/**
+ * Pull openable things out of a command line.
+ *
+ * Windows hands a file association or a default-browser click straight to the
+ * executable as an argument, so this is what makes "Open with Stratus" work.
+ * Switches are skipped, and so is the app directory Electron itself is given -
+ * only real files and web addresses survive.
+ */
+function targetsFromArgv(argv = []) {
+  const targets = [];
+  for (const arg of argv.slice(1)) {
+    if (!arg || arg.startsWith('-')) continue;
+    if (/^(https?|stratus):\/\//i.test(arg)) {
+      targets.push(arg);
+      continue;
+    }
+    try {
+      if (fs.existsSync(arg) && fs.statSync(arg).isFile()) {
+        targets.push(pathToFileURL(arg).toString());
+      }
+    } catch {
+      // Not a path we can open; ignore it rather than fail the launch.
+    }
+  }
+  return targets;
+}
+
 module.exports = {
   SEARCH_ENGINES,
+  targetsFromArgv,
   INTERNAL_PAGES,
   DEFAULT_SHORTCUTS,
   expandShortcut,

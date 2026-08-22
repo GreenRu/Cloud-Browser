@@ -28,6 +28,8 @@ class Tab {
         nodeIntegration: false,
         sandbox: true,
         webviewTag: false,
+        // Chromium's own PDF viewer, so a .pdf opens rather than downloading.
+        plugins: true,
         spellcheck: true,
         backgroundThrottling: true
       }

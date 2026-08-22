@@ -15,6 +15,8 @@
     "start": "electron .",
     "dev": "electron . --enable-logging",
     "shortcut": "powershell -ExecutionPolicy Bypass -File tools/make-shortcut.ps1",
+    "register": "powershell -ExecutionPolicy Bypass -File tools/register-windows.ps1",
+    "unregister": "powershell -ExecutionPolicy Bypass -File tools/register-windows.ps1 -Unregister",
     "package": "npx --yes @electron/packager . \"Stratus\" --overwrite --out=dist --asar --prune --ignore=\"^/(dist|CloudBrowser-win32-x64|plugins)$\"",
     "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\""
   },

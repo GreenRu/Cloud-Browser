@@ -24,7 +24,7 @@ const path = require('path');
 const { Store } = require('./store');
 const { BrowserShell, PARTITION } = require('./shell');
 const { PasswordVault } = require('./passwords');
-const { DEFAULT_SHORTCUTS, SEARCH_ENGINES, normalizeInput, prettifyUrl } = require('./urls');
+const { DEFAULT_SHORTCUTS, SEARCH_ENGINES, normalizeInput, prettifyUrl, targetsFromArgv } = require('./urls');
 const { buildAppMenu, popupToolsMenu } = require('./menu');
 
 /*
@@ -252,8 +252,9 @@ function sanitizeShortcuts(input) {
   return clean;
 }
 
-function createShell() {
+function createShell(targets = []) {
   const instance = new BrowserShell(store, vault);
+  instance.pendingTargets = targets;
   shells.push(instance);
   instance.window.on('closed', () => {
     const i = shells.indexOf(instance);
@@ -267,13 +268,15 @@ function createShell() {
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
+  // A second launch - including a file opened with Stratus, or a link clicked
+  // while Stratus is the default browser - lands here rather than starting a
+  // second copy.
   app.on('second-instance', (_e, argv) => {
     const shellRef = currentShell();
     if (!shellRef) return;
     if (shellRef.window.isMinimized()) shellRef.window.restore();
     shellRef.window.focus();
-    const url = argv.find((a) => /^https?:\/\//i.test(a));
-    if (url) shellRef.newTab(url);
+    for (const target of targetsFromArgv(argv)) shellRef.newTab(target);
   });
 
   app.whenReady().then(() => {
@@ -283,10 +286,20 @@ if (!app.requestSingleInstanceLock()) {
     nativeTheme.themeSource = store.get('theme') === 'night' ? 'dark' : 'light';
     configureSession();
     registerIpc();
-    createShell();
+    createShell(targetsFromArgv(process.argv));
 
     app.on('activate', () => {
       if (shells.length === 0) createShell();
+    });
+
+    // macOS hands files over this way rather than on the command line.
+    app.on('open-file', (event, filePath) => {
+      event.preventDefault();
+      const [target] = targetsFromArgv(['', filePath]);
+      if (!target) return;
+      const shellRef = currentShell();
+      if (shellRef) shellRef.newTab(target);
+      else createShell([target]);
     });
   });
 

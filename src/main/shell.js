@@ -134,6 +134,14 @@ class BrowserShell {
   // --- lifecycle -----------------------------------------------------------
 
   _restoreSession() {
+    // Anything handed to us on the command line wins: the user asked for that
+    // file, not for last night's tabs.
+    if (this.pendingTargets && this.pendingTargets.length) {
+      const targets = this.pendingTargets;
+      this.pendingTargets = [];
+      targets.forEach((url, i) => this.newTab(url, { background: i > 0 }));
+      return;
+    }
     const session = this.store.get('session');
     const urls = Array.isArray(session) && session.length
       ? session
