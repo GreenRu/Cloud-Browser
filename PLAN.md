@@ -68,8 +68,11 @@ Also landed in phase 1, found while testing:
 
 ## Phase 2 — cloud shapes everywhere
 
-- [x] Quick-link cards on the new tab page become clouds: rounded body with
-      lobes off the top edge that overhang the sides slightly.
+- [x] Quick links became clouds, then the whole grid went. A grid of equal
+      cards with letter tiles in coloured rounded squares reads as a Material
+      launcher no matter what shape the cards are - the lobes were decoration
+      bolted onto the wrong idiom. Links now hang at hand-placed positions and
+      different distances, with the sites' real favicons.
 - [x] Share the lobe generator between the tab strip and the pages instead of
       writing it twice - `src/shared/clouds.js`, loaded as a plain script by
       both the chrome renderer and the file:// pages.

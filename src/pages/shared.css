@@ -8,6 +8,7 @@
   --card: rgba(255, 255, 255, 0.9);
   --card-solid: #ffffff;
   --card-hover: #f2f8ff;
+  --drift-far: #a8c9e6;
   --card-line: rgba(15, 23, 42, 0.08);
   --text: #21364d;
   --text-dim: #5f7791;
@@ -24,6 +25,7 @@
   --card: rgba(255, 255, 255, 0.06);
   --card-solid: #1d2b45;
   --card-hover: #2a3c5c;
+  --drift-far: #45608a;
   --card-line: rgba(255, 255, 255, 0.09);
   --text: #dbe7f7;
   --text-dim: #8ea4c2;
