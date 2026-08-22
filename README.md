@@ -178,3 +178,12 @@ permission prompt (non-essential permissions are currently denied), omnibox
 autocomplete, and an account picker for sites with several saved logins. The plumbing is in place for each: `shells` is already an array,
 `Store` takes arbitrary keys, and permissions are gated in one place in
 `src/main/index.js`.
+
+## License
+
+Stratus is free software under the [GNU General Public License v3](LICENSE) or
+later. It comes with no warranty. Anything you build on it and distribute has
+to carry the same freedoms - including the source.
+
+Electron and Chromium ship under their own licences (MIT and BSD-style), which
+GPL-3 permits.
