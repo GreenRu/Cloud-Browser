@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy"
+          content="default-src 'none'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:;" />
+    <title>History</title>
+    <link rel="stylesheet" href="./shared.css" />
+  </head>
+  <body>
+    <main class="page">
+      <h1 class="page-title">History</h1>
+      <p class="page-sub" id="count">Loading…</p>
+
+      <div class="toolbar-row">
+        <input class="field" id="filter" type="text" placeholder="Search history" spellcheck="false" autocomplete="off" />
+        <button class="ghost-btn" id="clear">Clear all</button>
+      </div>
+
+      <div id="groups"></div>
+    </main>
+    <script src="./history.js"></script>
+  </body>
+</html>

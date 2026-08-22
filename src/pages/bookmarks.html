@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy"
+          content="default-src 'none'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:;" />
+    <title>Bookmarks</title>
+    <link rel="stylesheet" href="./shared.css" />
+  </head>
+  <body>
+    <main class="page">
+      <h1 class="page-title">Bookmarks</h1>
+      <p class="page-sub" id="count">Loading…</p>
+
+      <div class="toolbar-row">
+        <input class="field" id="filter" type="text" placeholder="Search bookmarks" spellcheck="false" autocomplete="off" />
+      </div>
+
+      <div class="card" id="list"></div>
+    </main>
+    <script src="./bookmarks.js"></script>
+  </body>
+</html>

@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy"
+          content="default-src 'none'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:;" />
+    <title>New Tab</title>
+    <link rel="stylesheet" href="./shared.css" />
+    <style>
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .hero {
+        width: 100%;
+        max-width: 620px;
+        padding: 0 24px 60px;
+        text-align: center;
+      }
+
+      .mark {
+        width: 92px;
+        height: 92px;
+        margin: 0 auto 10px;
+        color: #9ec8ea;
+        filter: drop-shadow(0 8px 16px rgba(20, 45, 75, 0.16));
+        animation: float 6s ease-in-out infinite alternate;
+      }
+
+      [data-theme="night"] .mark { color: rgba(150, 180, 216, 0.42); }
+
+      @keyframes float {
+        from { transform: translateY(-4px); }
+        to { transform: translateY(6px); }
+      }
+
+      .wordmark {
+        margin: 0 0 26px;
+        font-family: var(--brand-font);
+        font-size: 30px;
+        font-weight: 700;
+        letter-spacing: -0.5px;
+        color: var(--text);
+      }
+
+      .search {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        height: 50px;
+        padding: 0 8px 0 20px;
+        border: 1px solid var(--card-line);
+        border-radius: 999px;
+        background: var(--field);
+        box-shadow: var(--shadow);
+        transition: box-shadow 200ms ease, transform 200ms ease;
+      }
+
+      .search:focus-within {
+        transform: translateY(-1px);
+        box-shadow: 0 14px 34px rgba(20, 45, 75, 0.18);
+      }
+
+      .search input {
+        flex: 1 1 auto;
+        min-width: 0;
+        height: 100%;
+        border: 0;
+        outline: none;
+        background: none;
+        color: var(--text);
+        font: inherit;
+        font-size: 15px;
+      }
+
+      .search input::placeholder { color: var(--text-dim); }
+
+      .search button {
+        flex: 0 0 auto;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        color: #fff;
+        background: var(--accent);
+        display: grid;
+        place-items: center;
+      }
+
+      .search button svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+      .links {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+        gap: 10px;
+        margin-top: 30px;
+      }
+
+      .link {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        padding: 16px 8px 13px;
+        border: 1px solid var(--card-line);
+        border-radius: 20px;
+        background: var(--card);
+        font-size: 12px;
+        font-weight: 600;
+        transition: transform 160ms cubic-bezier(0.22, 1, 0.36, 1), background 160ms linear;
+      }
+
+      .link:hover { transform: translateY(-3px); background: rgba(255, 255, 255, 0.95); }
+      [data-theme="night"] .link:hover { background: rgba(255, 255, 255, 0.12); }
+
+      .link-badge {
+        display: grid;
+        place-items: center;
+        width: 34px;
+        height: 34px;
+        border-radius: 12px;
+        color: #fff;
+        font-family: var(--brand-font);
+        font-size: 15px;
+        font-weight: 700;
+      }
+
+      .recent { margin-top: 34px; text-align: left; }
+      .recent-head {
+        margin: 0 0 10px;
+        font-size: 11.5px;
+        font-weight: 700;
+        letter-spacing: 0.7px;
+        text-transform: uppercase;
+        color: var(--text-dim);
+      }
+
+      .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+
+      .chip {
+        max-width: 230px;
+        padding: 7px 13px;
+        border: 1px solid var(--card-line);
+        border-radius: 999px;
+        background: var(--card);
+        font-size: 12px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        transition: background 120ms linear;
+      }
+
+      .chip:hover { background: rgba(127, 160, 200, 0.22); }
+    </style>
+  </head>
+  <body>
+    <main class="hero">
+      <svg class="mark" viewBox="0 0 24 24" aria-hidden="true">
+        <path fill="currentColor" d="M6.5 18h11a4 4 0 0 0 .6-7.95A5.5 5.5 0 0 0 7.6 8.6 4.2 4.2 0 0 0 6.5 18Z" />
+      </svg>
+      <h1 class="wordmark">Cloud Browser</h1>
+
+      <form class="search" id="search-form">
+        <input
+          id="q"
+          type="text"
+          autofocus
+          spellcheck="false"
+          autocomplete="off"
+          placeholder="Search the sky or type a URL" />
+        <button type="submit" aria-label="Go">
+          <svg viewBox="0 0 24 24"><path d="M5 12h13M13 6l6 6-6 6" /></svg>
+        </button>
+      </form>
+
+      <nav class="links" id="links"></nav>
+
+      <section class="recent" id="recent" hidden>
+        <h2 class="recent-head">Recently visited</h2>
+        <div class="chips" id="chips"></div>
+      </section>
+    </main>
+
+    <script src="./newtab.js"></script>
+  </body>
+</html>

@@ -1,0 +1,17 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+CloudBrowser-win32-x64/
+
+# logs and local scratch
+*.log
+npm-debug.log*
+.scratch/
+
+# editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

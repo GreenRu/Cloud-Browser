@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy"
+          content="default-src 'none'; img-src 'self' data: https: http:; style-src 'self' 'unsafe-inline'; script-src 'self'; font-src 'self';" />
+    <title>Cloud Browser</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <!-- Everything lives in the sky column on the left. The page floats to the
+         right of it as a single card, with no chrome above it. -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-head">
+        <div class="brand" title="Cloud Browser">
+          <svg viewBox="0 0 24 24" aria-hidden="true" class="brand-mark">
+            <path d="M6.5 18h11a4 4 0 0 0 .6-7.95A5.5 5.5 0 0 0 7.6 8.6 4.2 4.2 0 0 0 6.5 18Z" />
+          </svg>
+          <span class="brand-name">Cloud</span>
+        </div>
+      </div>
+
+      <div class="omnibox" id="omnibox">
+        <span class="omni-badge" id="omni-badge" title="Connection status"></span>
+        <input
+          id="address"
+          class="omni-input"
+          type="text"
+          spellcheck="false"
+          autocomplete="off"
+          placeholder="Search or type a URL"
+          aria-label="Address and search bar" />
+        <button class="omni-btn" id="bookmark" title="Bookmark this page (Ctrl+D)" aria-label="Bookmark">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5l2.2 4.6 5 .7-3.6 3.5.85 5-4.45-2.35L7.55 18.3l.85-5L4.8 9.8l5-.7z" /></svg>
+        </button>
+      </div>
+
+      <div class="nav-row">
+        <button class="tool-btn" id="back" title="Back (Alt+Left)" aria-label="Back">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>
+        </button>
+        <button class="tool-btn" id="forward" title="Forward (Alt+Right)" aria-label="Forward">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" /></svg>
+        </button>
+        <button class="tool-btn" id="reload" title="Reload (Ctrl+R)" aria-label="Reload">
+          <svg viewBox="0 0 24 24" aria-hidden="true" class="icon-reload">
+            <path d="M20 11a8 8 0 1 0-.6 4" />
+            <path d="M20 4v7h-7" />
+          </svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true" class="icon-stop">
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
+        </button>
+        <button class="tool-btn" id="home" title="Home (Alt+Home)" aria-label="Home">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11l8-6 8 6v8a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z" /></svg>
+        </button>
+
+        <span class="nav-gap"></span>
+
+        <button class="tool-btn" id="find-open" title="Find in page (Ctrl+F)" aria-label="Find in page">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6" /><path d="M20 20l-4.3-4.3" /></svg>
+        </button>
+        <button class="tool-btn" id="theme" title="Toggle day / night" aria-label="Toggle theme">
+          <svg viewBox="0 0 24 24" aria-hidden="true" class="icon-day"><circle cx="12" cy="12" r="4.2" /><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6L17 7M7 17l-1.4 1.4" /></svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true" class="icon-night"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z" /></svg>
+        </button>
+        <button class="tool-btn" id="settings" title="Settings (Ctrl+,)" aria-label="Settings">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2" /><path d="M19.4 13.5a7.7 7.7 0 0 0 0-3l1.7-1.3-1.9-3.3-2 .8a7.8 7.8 0 0 0-2.6-1.5L14.3 3H10.5l-.3 2.2a7.8 7.8 0 0 0-2.6 1.5l-2-.8L3.7 9.2l1.7 1.3a7.7 7.7 0 0 0 0 3l-1.7 1.3 1.9 3.3 2-.8a7.8 7.8 0 0 0 2.6 1.5l.3 2.2h3.8l.3-2.2a7.8 7.8 0 0 0 2.6-1.5l2 .8 1.9-3.3z" /></svg>
+        </button>
+        <button class="tool-btn" id="menu" title="Menu" aria-label="Menu" aria-haspopup="true">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5.5" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="12" cy="18.5" r="1.6" /></svg>
+        </button>
+      </div>
+
+      <div class="tab-scroll">
+        <div class="tabstrip" id="tabstrip" role="tablist" aria-label="Open tabs"></div>
+        <button class="new-cloud" id="new-tab" title="New tab (Ctrl+T)" aria-label="New tab">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+          <span>New cloud</span>
+        </button>
+      </div>
+
+      <div class="sidebar-foot">
+        <span class="tab-count" id="tab-count"></span>
+      </div>
+
+      <div class="resizer" id="resizer" role="separator" aria-label="Resize sidebar" title="Drag to resize · double-click to collapse"></div>
+    </aside>
+
+    <main class="main">
+      <!-- Slim strip that exists so the window can be dragged and the OS can
+           paint its controls; deliberately empty otherwise. -->
+      <div class="titlestrip">
+        <div class="progress" id="progress" aria-hidden="true"><span></span></div>
+      </div>
+
+      <div class="drawer find-bar" id="find-bar" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true" class="drawer-icon"><circle cx="11" cy="11" r="6" /><path d="M20 20l-4.3-4.3" /></svg>
+        <input id="find-input" type="text" placeholder="Find in page" aria-label="Find in page" spellcheck="false" autocomplete="off" />
+        <span class="find-count" id="find-count">0/0</span>
+        <button class="tool-btn small" id="find-prev" title="Previous match" aria-label="Previous match">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 14l6-6 6 6" /></svg>
+        </button>
+        <button class="tool-btn small" id="find-next" title="Next match" aria-label="Next match">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 10l6 6 6-6" /></svg>
+        </button>
+        <button class="tool-btn small" id="find-close" title="Close (Esc)" aria-label="Close find bar">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+        </button>
+      </div>
+
+      <div class="drawer save-password" id="save-password" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true" class="drawer-icon">
+          <rect x="5" y="10.5" width="14" height="9" rx="2" /><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" />
+        </svg>
+        <span class="save-password-text" id="save-password-text"></span>
+        <button class="pill-btn ghost" id="save-password-never">Never</button>
+        <button class="pill-btn ghost" id="save-password-dismiss">Not now</button>
+        <button class="pill-btn primary" id="save-password-save">Save</button>
+      </div>
+
+      <div class="drawer bookmarks-bar" id="bookmarks-bar" hidden></div>
+
+      <div class="drawer toast" id="toast" hidden>
+        <span class="toast-text" id="toast-text"></span>
+        <button class="toast-action" id="toast-action" hidden>Show in folder</button>
+      </div>
+
+      <!-- Stand-in for the live page: its rect is what the main process uses to
+           place the WebContentsView. -->
+      <div class="stage" id="stage">
+        <div class="stage-cloud"></div>
+        <p class="stage-hint">Cloud Browser</p>
+      </div>
+    </main>
+
+    <script src="./cloud-tabs.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>

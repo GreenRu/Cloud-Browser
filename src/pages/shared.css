@@ -1,0 +1,172 @@
+/* Shared look for Cloud Browser's built-in pages. */
+
+:root {
+  /* Deliberately lighter than the chrome's sky: these pages sit inside the
+     rounded page card, and the card needs a visible edge against it. */
+  --sky-top: #f6faff;
+  --sky-bottom: #e4f0fb;
+  --card: rgba(255, 255, 255, 0.9);
+  --card-line: rgba(15, 23, 42, 0.08);
+  --text: #21364d;
+  --text-dim: #5f7791;
+  --accent: #2b7fe0;
+  --field: #ffffff;
+  --shadow: 0 10px 30px rgba(20, 45, 75, 0.12);
+  --ui-font: "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --brand-font: "Comfortaa", var(--ui-font);
+}
+
+[data-theme="night"] {
+  --sky-top: #141d2f;
+  --sky-bottom: #0b1220;
+  --card: rgba(255, 255, 255, 0.06);
+  --card-line: rgba(255, 255, 255, 0.09);
+  --text: #dbe7f7;
+  --text-dim: #8ea4c2;
+  --accent: #6aa9ff;
+  --field: #1a2740;
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--ui-font);
+  color: var(--text);
+  background: linear-gradient(180deg, var(--sky-top), var(--sky-bottom));
+  background-attachment: fixed;
+}
+
+a { color: inherit; text-decoration: none; }
+
+button {
+  font: inherit;
+  color: inherit;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.page {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 48px 28px 64px;
+}
+
+.page-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 6px;
+  font-family: var(--brand-font);
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+}
+
+.page-sub { margin: 0 0 28px; color: var(--text-dim); font-size: 14px; }
+
+.card {
+  border: 1px solid var(--card-line);
+  border-radius: 20px;
+  background: var(--card);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(10px);
+  overflow: hidden;
+}
+
+.field {
+  width: 100%;
+  height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--card-line);
+  border-radius: 999px;
+  background: var(--field);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  outline: none;
+}
+
+.field:focus { border-color: var(--accent); }
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--card-line);
+  cursor: pointer;
+  transition: background 120ms linear;
+}
+
+.row:last-child { border-bottom: 0; }
+.row:hover { background: rgba(127, 160, 200, 0.14); }
+
+.row-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 13.5px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row-url {
+  flex: 0 1 320px;
+  min-width: 0;
+  color: var(--text-dim);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row-meta { flex: 0 0 auto; color: var(--text-dim); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+
+.row-remove {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  color: var(--text-dim);
+  opacity: 0;
+  line-height: 1;
+  font-size: 15px;
+}
+
+.row:hover .row-remove { opacity: 0.8; }
+.row-remove:hover { background: rgba(127, 160, 200, 0.28); opacity: 1; }
+
+.empty {
+  padding: 46px 20px;
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 14px;
+}
+
+.group-label {
+  margin: 26px 0 10px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.ghost-btn {
+  padding: 7px 16px;
+  border: 1px solid var(--card-line);
+  border-radius: 999px;
+  background: var(--card);
+  font-size: 12.5px;
+  font-weight: 600;
+  transition: background 120ms linear;
+}
+
+.ghost-btn:hover { background: rgba(127, 160, 200, 0.2); }
+
+.toolbar-row { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }

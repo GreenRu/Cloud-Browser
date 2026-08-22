@@ -1,0 +1,24 @@
+{
+  "name": "cloud-browser",
+  "productName": "Cloud Browser",
+  "version": "0.2.0",
+  "description": "A small, tidy web browser with cloud-shaped tabs, built on Electron.",
+  "main": "src/main/index.js",
+  "type": "commonjs",
+  "license": "ISC",
+  "author": "",
+  "keywords": [
+    "electron",
+    "browser"
+  ],
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --enable-logging",
+    "shortcut": "powershell -ExecutionPolicy Bypass -File tools/make-shortcut.ps1",
+    "package": "npx --yes @electron/packager . \"Cloud Browser\" --overwrite --out=dist --asar --prune --ignore=\"^/(dist|CloudBrowser-win32-x64|plugins)$\"",
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "devDependencies": {
+    "electron": "^43.4.1"
+  }
+}
