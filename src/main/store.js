@@ -11,6 +11,7 @@ const DEFAULTS = {
   searchEngine: 'google',
   shortcuts: { ...DEFAULT_SHORTCUTS },
   savePasswords: true,
+  showFullUrl: true,
   window: { width: 1280, height: 820, x: null, y: null, maximized: false },
   sidebarWidth: 252,
   bookmarks: [],                      // { id, title, url, addedAt }

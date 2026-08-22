@@ -130,6 +130,7 @@ function registerIpc() {
     shortcuts: store.get('shortcuts'),
     defaultShortcuts: DEFAULT_SHORTCUTS,
     savePasswords: store.get('savePasswords'),
+    showFullUrl: store.get('showFullUrl') !== false,
     encryptionAvailable: vault.available,
     blockedOrigins: vault.data.never,
     historyCount: store.get('history').length
@@ -144,6 +145,9 @@ function registerIpc() {
     }
     if (typeof patch.savePasswords === 'boolean') {
       store.set('savePasswords', patch.savePasswords);
+    }
+    if (typeof patch.showFullUrl === 'boolean') {
+      store.set('showFullUrl', patch.showFullUrl);
     }
     if (patch.shortcuts && typeof patch.shortcuts === 'object') {
       store.set('shortcuts', sanitizeShortcuts(patch.shortcuts));

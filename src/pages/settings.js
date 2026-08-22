@@ -41,11 +41,13 @@ function renderSearch() {
 
   $('homepage').value = settings.homepage;
   $('theme').value = settings.theme;
+  $('show-full-url').checked = settings.showFullUrl !== false;
 }
 
 $('engine').addEventListener('change', (e) => patch({ searchEngine: e.target.value }));
 $('theme').addEventListener('change', (e) => patch({ theme: e.target.value }).then(applyTheme));
 $('homepage').addEventListener('change', (e) => patch({ homepage: e.target.value }));
+$('show-full-url').addEventListener('change', (e) => patch({ showFullUrl: e.target.checked }));
 
 /* ---------------------------------------------------------------- shortcuts */
 

@@ -406,6 +406,10 @@ svg {
 .tab-favicon img { width: 16px; height: 16px; object-fit: contain; }
 .tab-favicon svg { width: 16px; height: 16px; }
 
+/* The browser's own pages draw their mark in the tab's own colour. */
+.tab-favicon.is-internal { color: var(--accent); opacity: 0.9; }
+.tab.active .tab-favicon.is-internal { opacity: 1; }
+
 .tab-spinner {
   flex: 0 0 auto;
   width: 14px;

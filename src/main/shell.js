@@ -606,6 +606,7 @@ class BrowserShell {
       activeId: this.activeId,
       theme: this.store.get('theme'),
       sidebarWidth: this.store.get('sidebarWidth'),
+      showFullUrl: this.store.get('showFullUrl') !== false,
       bookmarks: this.store.get('bookmarks'),
       bookmarked: active ? this.store.isBookmarked(active.url) : false
     };

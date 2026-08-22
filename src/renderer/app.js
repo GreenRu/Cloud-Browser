@@ -69,7 +69,8 @@ const state = {
   theme: 'day',
   bookmarks: [],
   bookmarked: false,
-  sidebarWidth: 252
+  sidebarWidth: 252,
+  showFullUrl: true
 };
 
 let omniDirty = false;
@@ -113,9 +114,28 @@ function render(next) {
   reportContentBounds();
 }
 
+/**
+ * What the address bar shows when it is not being edited.
+ *
+ * With "show full address" off it is trimmed to the host - subdomains and all -
+ * because the scheme, path and query are rarely what you are checking. The
+ * whole address comes back the moment the field is focused, so editing and
+ * copying still work on the real thing.
+ */
 function displayUrl(tab) {
   if (!tab?.url || tab.url === 'cloud://newtab') return '';
-  return tab.url;
+  if (state.showFullUrl) return tab.url;
+  return hostOnly(tab.url);
+}
+
+function hostOnly(url) {
+  try {
+    const { hostname, port } = new URL(url);
+    if (!hostname) return url;
+    return port ? `${hostname}:${port}` : hostname;
+  } catch {
+    return url;
+  }
 }
 
 function renderBadge(url) {
@@ -323,6 +343,11 @@ let blurTimer = null;
 el.address.addEventListener('focus', () => {
   clearTimeout(blurTimer);
   el.omnibox.classList.add('focused');
+  // Edit the real address, not the trimmed one on display.
+  if (!state.showFullUrl && !omniDirty) {
+    const tab = activeTab();
+    if (tab?.url && tab.url !== 'cloud://newtab') el.address.value = tab.url;
+  }
   // Select-all belongs to the user's first focus only. The preview bounces
   // focus back here as it attaches, and re-selecting then means the next
   // keystroke replaces everything already typed.

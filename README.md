@@ -26,7 +26,10 @@ npm start
   you can add your own in Settings, where `%s` marks the query.
 - **Saved passwords**, encrypted with the OS keystore — see below.
 - **Settings page** at `cloud://settings` (`Ctrl+,`) for the search engine,
-  home page, theme, shortcuts, saved logins and clearing history.
+  home page, theme, address-bar display, shortcuts, saved logins and clearing
+  history.
+- **Trimmed addresses** (optional): the bar can show just the site —
+  `news.ycombinator.com` — and reveal the whole address when you click it.
 - **Navigation**: back, forward, reload, stop, home, zoom, find-in-page with
   match counts, print.
 - **Bookmarks and history**, persisted to disk, each with its own built-in page.
