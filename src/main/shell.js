@@ -118,6 +118,9 @@ class BrowserShell {
     this.window.webContents.on('did-finish-load', () => {
       this._broadcast();
       if (this.tabs.size === 0) this._restoreSession();
+      // Built now, while nobody is typing, so showing it later is only a
+      // visibility flip.
+      if (LIVE_PAGE_PREVIEW) this._ensurePreview();
     });
 
     // The chrome UI never navigates itself; outbound links become tabs.
@@ -236,6 +239,12 @@ class BrowserShell {
     this.hidePreview();
     this.activeId = id;
     this.window.contentView.addChildView(tab.view);
+    // The tab view now sits above the preview; lift the preview back on top.
+    // Safe here because switching tabs is never mid-keystroke.
+    if (this.previewView && !this.previewView.webContents.isDestroyed()) {
+      this.window.contentView.removeChildView(this.previewView);
+      this.window.contentView.addChildView(this.previewView);
+    }
     this._layout();
     tab.webContents.focus();
     this._broadcast();
@@ -319,6 +328,13 @@ class BrowserShell {
 
     // A preview must never become a window or steal the session.
     this.previewView.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+
+    // Attached once, for the window's lifetime, and hidden until wanted.
+    // Adding a child view moves native focus to it, and doing that mid-word
+    // sends the next keystrokes to the preview instead of the address bar.
+    this.previewView.setVisible(false);
+    this.window.contentView.addChildView(this.previewView);
+    this.window.webContents.focus();
     return this.previewView;
   }
 
@@ -335,12 +351,10 @@ class BrowserShell {
 
     const view = this._ensurePreview();
     if (!this.previewAttached) {
-      this.window.contentView.addChildView(view);
+      // Only a visibility flip here: adding or re-adding a view steals native
+      // focus, and this runs while the user is typing.
+      view.setVisible(true);
       this.previewAttached = true;
-      // Adding a view moves native focus to it, which blurs the address bar and
-      // would immediately hide the bubble that asked for the preview. Hand
-      // focus straight back to the chrome.
-      this.window.webContents.focus();
     }
 
     view.setBounds({
@@ -367,7 +381,7 @@ class BrowserShell {
     if (!this.previewAttached || !this.previewView) return;
     if (!this.previewView.webContents.isDestroyed()) {
       this.previewView.webContents.stop();
-      this.window.contentView.removeChildView(this.previewView);
+      this.previewView.setVisible(false);
     }
     this.previewAttached = false;
     this.previewUrl = null;
@@ -376,6 +390,7 @@ class BrowserShell {
   destroyPreview() {
     this.hidePreview();
     if (this.previewView && !this.previewView.webContents.isDestroyed()) {
+      this.window.contentView.removeChildView(this.previewView);
       this.previewView.webContents.close();
     }
     this.previewView = null;

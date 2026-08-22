@@ -238,6 +238,17 @@ el.resizer.addEventListener('dblclick', () => {
  * stage, so both stay in step when the window or sidebar moves.
  */
 let lastPreviewKey = '';
+let previewTimer = null;
+
+/**
+ * How long typing must settle before the page itself is fetched.
+ *
+ * The destination updates on every character, but attaching and loading the
+ * preview view moves native focus away from the address bar, and doing that
+ * mid-word costs keystrokes. Coalescing the loads keeps the field stable while
+ * still showing the real page.
+ */
+const PREVIEW_SETTLE_MS = 650;
 
 function normalizedInput(value) {
   // Spaces alone never trigger a reload, per the "excluding spaces" rule.
@@ -245,21 +256,30 @@ function normalizedInput(value) {
 }
 
 function updateThought() {
-  const raw = el.address.value;
-  const key = normalizedInput(raw);
+  const key = normalizedInput(el.address.value);
 
-  if (!key || document.activeElement !== el.address) return hideThought();
+  // Only an empty field closes the bubble. Focus can bounce to the preview for
+  // a frame as it attaches; that is not the user leaving.
+  if (!key) return hideThought();
 
   el.thought.hidden = false;
-  el.thoughtLabel.textContent = key;
-
-  if (key === lastPreviewKey) {
-    // Still position it: the window may have moved since the last keystroke.
-    sendPreview(key);
-    return;
-  }
   lastPreviewKey = key;
-  sendPreview(key);
+
+  // Instant, costs nothing: say where Enter would go.
+  api.preview
+    .resolve(key)
+    .then((url) => {
+      if (el.thought.hidden || normalizedInput(el.address.value) !== key) return;
+      el.thoughtLabel.textContent = url || key;
+      el.thoughtUrl.textContent = url || key;
+    })
+    .catch(() => {});
+
+  // Deferred: fetch the page once the typing settles.
+  clearTimeout(previewTimer);
+  previewTimer = setTimeout(() => {
+    if (!el.thought.hidden) sendPreview(lastPreviewKey);
+  }, PREVIEW_SETTLE_MS);
 }
 
 function sendPreview(key) {
@@ -279,6 +299,7 @@ el.thought.addEventListener('animationend', () => {
 });
 
 function hideThought() {
+  clearTimeout(previewTimer);
   if (el.thought.hidden) return;
   el.thought.hidden = true;
   lastPreviewKey = '';
@@ -302,17 +323,21 @@ let blurTimer = null;
 el.address.addEventListener('focus', () => {
   clearTimeout(blurTimer);
   el.omnibox.classList.add('focused');
-  requestAnimationFrame(() => el.address.select());
+  // Select-all belongs to the user's first focus only. The preview bounces
+  // focus back here as it attaches, and re-selecting then means the next
+  // keystroke replaces everything already typed.
+  if (!omniDirty) requestAnimationFrame(() => el.address.select());
 });
 
 el.address.addEventListener('blur', () => {
   clearTimeout(blurTimer);
   blurTimer = setTimeout(() => {
     el.omnibox.classList.remove('focused');
-    omniDirty = false;
-    el.address.value = displayUrl(activeTab());
     hideThought();
-  }, 250);
+    // Only restore the tab's URL if nothing was typed. Wiping a half-typed
+    // address because focus moved is how this used to eat input.
+    if (!omniDirty) el.address.value = displayUrl(activeTab());
+  }, 400);
 });
 
 el.address.addEventListener('input', () => {

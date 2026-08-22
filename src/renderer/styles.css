@@ -625,10 +625,10 @@ svg {
   transition: height var(--t-slow) var(--spring);
 }
 
-/* Fallback shown only when the live preview is switched off. */
+/* Visible until the page view lands over it, and whenever the live preview is
+   switched off entirely. */
 .thought.compact .thought-screen { height: auto; background: transparent; }
 .thought.compact .thought-head { display: none; }
-.thought:not(.compact) .thought-destination { display: none; }
 
 .thought-destination {
   display: flex;

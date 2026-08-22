@@ -41,6 +41,7 @@ contextBridge.exposeInMainWorld('cloud', {
   },
 
   preview: {
+    resolve: (input) => ipcRenderer.invoke('preview:resolve', input),
     show: (input, rect, viewport) => ipcRenderer.send('preview:show', input, rect, viewport),
     hide: () => ipcRenderer.send('preview:hide')
   },

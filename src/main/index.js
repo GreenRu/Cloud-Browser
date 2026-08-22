@@ -4,7 +4,7 @@ const { app, ipcMain, session, shell, Menu, dialog, nativeTheme } = require('ele
 const { Store } = require('./store');
 const { BrowserShell, PARTITION } = require('./shell');
 const { PasswordVault } = require('./passwords');
-const { DEFAULT_SHORTCUTS, SEARCH_ENGINES } = require('./urls');
+const { DEFAULT_SHORTCUTS, SEARCH_ENGINES, normalizeInput, prettifyUrl } = require('./urls');
 const { buildAppMenu, popupToolsMenu } = require('./menu');
 
 // One window per launch for now; the array leaves room for multi-window later.
@@ -73,6 +73,13 @@ function registerIpc() {
   ipcMain.on('view:content-bounds', withShell((s, rect, viewport) => s.setContentInsets(rect, viewport)));
   ipcMain.on('view:sidebar-width', withShell((s, width) => s.store.set('sidebarWidth', width)));
   ipcMain.on('view:theme', withShell((s, theme) => s.setTheme(theme)));
+
+  // Resolving is free; loading is not. The renderer asks for the destination on
+  // every keystroke and only asks for a load once the typing settles.
+  ipcMain.handle('preview:resolve', (_event, input) => {
+    const url = normalizeInput(input, store.get('searchEngine'), store.get('shortcuts'));
+    return url ? prettifyUrl(url) : null;
+  });
 
   ipcMain.on('preview:show', withShell((s, input, rect, viewport) => s.showPreview(input, rect, viewport)));
   ipcMain.on('preview:hide', withShell((s) => s.hidePreview()));
