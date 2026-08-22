@@ -14,13 +14,14 @@ const PARTITION = 'persist:cloud';
 const DEFAULT_INSETS = { left: 252, top: 40, right: 10, bottom: 10 };
 
 /**
- * The thought bubble's live page preview.
- *
- * Switched off: the bubble still resolves where Enter would take you and says
- * so, but nothing is fetched. The machinery below is intact and correct - flip
- * this to true to bring the rendered preview back.
+ * The thought bubble's live page preview: the bubble's interior is a real page,
+ * reloaded as the address bar is typed into. Set to false to make the bubble
+ * name its destination without fetching anything.
  */
-const LIVE_PAGE_PREVIEW = false;
+const LIVE_PAGE_PREVIEW = true;
+
+/** Matches the .thought-screen radius in the renderer stylesheet. */
+const PREVIEW_RADIUS = 15;
 
 // Must match --titlestrip-h and the top stop of the sky gradient in the
 // renderer stylesheet, so the OS-drawn window controls sit flush on the sky.
@@ -314,7 +315,7 @@ class BrowserShell {
       }
     });
     this.previewView.setBackgroundColor('#ffffff');
-    this.previewView.setBorderRadius?.(0);
+    this.previewView.setBorderRadius?.(PREVIEW_RADIUS);
 
     // A preview must never become a window or steal the session.
     this.previewView.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
@@ -336,6 +337,10 @@ class BrowserShell {
     if (!this.previewAttached) {
       this.window.contentView.addChildView(view);
       this.previewAttached = true;
+      // Adding a view moves native focus to it, which blurs the address bar and
+      // would immediately hide the bubble that asked for the preview. Hand
+      // focus straight back to the chrome.
+      this.window.webContents.focus();
     }
 
     view.setBounds({
@@ -351,6 +356,10 @@ class BrowserShell {
       this.previewUrl = url;
       view.webContents.stop();
       view.webContents.loadURL(resolveLoadTarget(url)).catch(() => {});
+      // A committed load takes focus too; the user is still typing.
+      view.webContents.once('did-finish-load', () => {
+        if (this.previewAttached && !this.window.isDestroyed()) this.window.webContents.focus();
+      });
     }
   }
 

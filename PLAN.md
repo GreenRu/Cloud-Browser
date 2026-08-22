@@ -81,20 +81,27 @@ Verify: one screenshot of the new tab page.
 A comic-book thought bubble hanging off the address bar while typing, with three
 small bubbles tapering between it and the field, idly breathing in size.
 
-Built as option (b), then **switched off at the connection**: `LIVE_PAGE_PREVIEW`
-in `src/main/shell.js` is `false`, so the bubble resolves and names the
-destination but nothing is fetched and no preview view is ever created. The
-machinery is intact — flip the flag to bring the rendered preview back.
+Built as option (b): `LIVE_PAGE_PREVIEW` in `src/main/shell.js` is `true`, and
+the bubble's interior is a real page that reloads per character. Set the flag to
+`false` for a destination-only bubble that fetches nothing.
 
-Building it surfaced a constraint worth remembering:
+Two constraints came out of building it, both worth remembering:
 
 > **The chrome renderer cannot draw over the page.** A tab is a
 > `WebContentsView`, a native child stacked above the window's own web
-> contents, so any HTML positioned over the page area is invisible behind it.
-> The bubble now lives inside the sidebar column for that reason.
+> contents, so HTML positioned over the page area is invisible behind it.
+> The bubble works around this: its frame is drawn *larger* than the preview
+> view, so the head row and the ring of padding fall outside the view's rect
+> and stay visible. That ring is what reads as the bubble.
 
-That same constraint is why phase 4's custom page context menu needs an overlay
-view rather than an HTML popup — budget for it there.
+> **Attaching a view steals native focus.** That blurred the address bar, which
+> hid the bubble, which tore down the preview a frame after it appeared. Fixed
+> on both sides: the main process hands focus back after attaching and after
+> each load, and the renderer gives blur a 250 ms grace so a focus bounce does
+> not count as the user leaving the field.
+
+Phase 4's custom page context menu needs the same overlay treatment — budget
+for it there.
 
 - [x] Bubble shell, tail of three tapering circles, idle size animation.
 - [x] Destination resolution shown live, spaces excluded from triggering.

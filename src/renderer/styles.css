@@ -535,14 +535,16 @@ svg {
 
 /* ---------- thought bubble ---------- */
 
-/* In the sidebar flow rather than floating over the page: the page is a native
-   view stacked above this renderer, so anything drawn over it is invisible.
-   Sitting in the column also means the bubble pushes the clouds down instead
-   of covering them. */
+/* Floats over the page. Only the parts of this frame that fall outside the
+   preview view's rect actually paint - the head row and the ring of padding
+   around the screen - because the view is a native child stacked above this
+   renderer. That ring is what reads as the bubble. */
 .thought {
-  position: relative;
-  flex: 0 0 auto;
-  margin: 30px 10px 2px;
+  position: fixed;
+  left: calc(var(--sidebar-w, 252px) + 18px);
+  top: 92px;
+  z-index: 20;
+  width: min(620px, calc(100vw - var(--sidebar-w, 252px) - 46px));
   pointer-events: none;
   animation: thought-in var(--t-slow) var(--spring-big) both;
 }
@@ -550,12 +552,13 @@ svg {
 .thought[hidden] { display: none; }
 
 @keyframes thought-in {
-  from { opacity: 0; transform: translateY(-14px) scale(0.9); }
+  from { opacity: 0; transform: translate(-16px, 10px) scale(0.9); }
   to { opacity: 1; transform: none; }
 }
 
-/* The tail: three puffs shrinking back up toward the address bar, comic-book
-   fashion. Each breathes on its own clock so it never looks mechanical. */
+/* The tail: three puffs shrinking back toward the address bar. They sit over
+   the sidebar, clear of the page view, so they stay visible. Each breathes on
+   its own clock so the tail never looks mechanical. */
 .thought-puff {
   position: absolute;
   border-radius: 50%;
@@ -564,9 +567,9 @@ svg {
   animation: puff-breathe var(--dur) ease-in-out var(--delay) infinite alternate;
 }
 
-.thought-puff-1 { width: 7px;  height: 7px;  left: 10px; top: -25px; --dur: 2.6s; --delay: 0s; }
-.thought-puff-2 { width: 11px; height: 11px; left: 17px; top: -18px; --dur: 3.4s; --delay: -0.8s; }
-.thought-puff-3 { width: 17px; height: 17px; left: 26px; top: -10px; --dur: 4.1s; --delay: -1.9s; }
+.thought-puff-1 { width: 8px;  height: 8px;  left: -62px; top: -30px; --dur: 2.6s; --delay: 0s; }
+.thought-puff-2 { width: 13px; height: 13px; left: -46px; top: -18px; --dur: 3.4s; --delay: -0.8s; }
+.thought-puff-3 { width: 20px; height: 20px; left: -26px; top: -4px;  --dur: 4.1s; --delay: -1.9s; }
 
 @keyframes puff-breathe {
   from { transform: scale(0.78); }
@@ -575,23 +578,18 @@ svg {
 
 .thought-bubble {
   pointer-events: auto;
-  border-radius: 20px;
+  padding: 0 7px 7px;
+  border-radius: 22px;
   background: var(--bubble);
-  /* No outline: the shadow alone lifts it off the sky. */
-  box-shadow: 0 10px 26px rgba(16, 44, 76, 0.22), 0 2px 6px rgba(16, 44, 76, 0.12);
-  overflow: hidden;
+  box-shadow: 0 16px 38px rgba(16, 44, 76, 0.3), 0 3px 8px rgba(16, 44, 76, 0.16);
 }
 
 .thought-head {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 7px 12px;
-  border-bottom: 1px solid var(--frame-line, rgba(15, 23, 42, 0.1));
+  padding: 9px 10px 8px;
 }
-
-/* With no page to preview, the head would just repeat the destination. */
-.thought.compact .thought-head { display: none; }
 
 .thought-label {
   flex: 1 1 auto;
@@ -615,19 +613,22 @@ svg {
   letter-spacing: 0.3px;
 }
 
-/* Placeholder the live preview view is positioned over when it is enabled. */
+/* The live view is positioned over exactly this rect, with a matching radius. */
 .thought-screen {
   position: relative;
-  height: 260px;
+  height: 340px;
   display: grid;
   place-items: center;
   overflow: hidden;
+  border-radius: 15px;
   background: var(--stage);
   transition: height var(--t-slow) var(--spring);
 }
 
-/* Destination only: nothing is fetched, so the bubble shrinks to fit. */
+/* Fallback shown only when the live preview is switched off. */
 .thought.compact .thought-screen { height: auto; background: transparent; }
+.thought.compact .thought-head { display: none; }
+.thought:not(.compact) .thought-destination { display: none; }
 
 .thought-destination {
   display: flex;

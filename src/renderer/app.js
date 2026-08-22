@@ -294,16 +294,25 @@ el.omnibox.addEventListener('click', (event) => {
   el.address.focus();
 });
 
+// Attaching the preview view moves native focus, which fires a blur here even
+// though the user never left the field. Give the blur a grace period: if focus
+// comes straight back, it was the preview, not the user.
+let blurTimer = null;
+
 el.address.addEventListener('focus', () => {
+  clearTimeout(blurTimer);
   el.omnibox.classList.add('focused');
   requestAnimationFrame(() => el.address.select());
 });
 
 el.address.addEventListener('blur', () => {
-  el.omnibox.classList.remove('focused');
-  omniDirty = false;
-  el.address.value = displayUrl(activeTab());
-  hideThought();
+  clearTimeout(blurTimer);
+  blurTimer = setTimeout(() => {
+    el.omnibox.classList.remove('focused');
+    omniDirty = false;
+    el.address.value = displayUrl(activeTab());
+    hideThought();
+  }, 250);
 });
 
 el.address.addEventListener('input', () => {
@@ -316,11 +325,13 @@ el.address.addEventListener('keydown', (e) => {
     const value = el.address.value.trim();
     if (!value) return;
     omniDirty = false;
+    clearTimeout(blurTimer);
     hideThought();
     api.nav.go(value);
     el.address.blur();
   } else if (e.key === 'Escape') {
     omniDirty = false;
+    clearTimeout(blurTimer);
     hideThought();
     el.address.blur();
   }

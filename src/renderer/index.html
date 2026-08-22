@@ -35,27 +35,6 @@
         </button>
       </div>
 
-      <!-- Comic-book thought bubble. It lives inside the sidebar on purpose:
-           the page is a native view layered above this renderer, so anything
-           drawn over the page area would be hidden behind it. -->
-      <div class="thought" id="thought" hidden>
-        <span class="thought-puff thought-puff-1"></span>
-        <span class="thought-puff thought-puff-2"></span>
-        <span class="thought-puff thought-puff-3"></span>
-        <div class="thought-bubble">
-          <div class="thought-head">
-            <span class="thought-label" id="thought-label"></span>
-            <span class="thought-hint">Enter</span>
-          </div>
-          <div class="thought-screen" id="thought-screen">
-            <div class="thought-destination" id="thought-destination">
-              <svg viewBox="0 0 24 24" aria-hidden="true" class="thought-arrow"><path d="M5 12h13M13 6l6 6-6 6" /></svg>
-              <span id="thought-url"></span>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <div class="nav-row">
         <button class="tool-btn" id="back" title="Back (Alt+Left)" aria-label="Back">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>
@@ -107,6 +86,31 @@
 
       <div class="resizer" id="resizer" role="separator" aria-label="Resize sidebar" title="Drag to resize · double-click to collapse"></div>
     </aside>
+
+    <!-- Comic-book thought bubble. It floats over the page, and its interior is
+         a live view of wherever Enter would take you.
+
+         The frame is deliberately larger than that view: a tab is a native
+         WebContentsView stacked above this renderer, so only the parts of the
+         frame that fall OUTSIDE the view's rect are visible - the head row and
+         the ring of padding around the screen. That ring is the bubble. -->
+    <div class="thought" id="thought" hidden>
+      <span class="thought-puff thought-puff-1"></span>
+      <span class="thought-puff thought-puff-2"></span>
+      <span class="thought-puff thought-puff-3"></span>
+      <div class="thought-bubble">
+        <div class="thought-head">
+          <span class="thought-label" id="thought-label"></span>
+          <span class="thought-hint">Enter to open</span>
+        </div>
+        <div class="thought-screen" id="thought-screen">
+          <div class="thought-destination" id="thought-destination">
+            <svg viewBox="0 0 24 24" aria-hidden="true" class="thought-arrow"><path d="M5 12h13M13 6l6 6-6 6" /></svg>
+            <span id="thought-url"></span>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <main class="main">
       <!-- Slim strip that exists so the window can be dragged and the OS can
