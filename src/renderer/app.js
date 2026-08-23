@@ -27,6 +27,8 @@ const el = {
   sidebar: $('sidebar'),
   tabstrip: $('tabstrip'),
   newTab: $('new-tab'),
+  mergeClouds: $('merge-clouds'),
+  mergeLabel: $('merge-label'),
   tabCount: $('tab-count'),
   resizer: $('resizer'),
   findBar: $('find-bar'),
@@ -205,6 +207,34 @@ new ResizeObserver(reportContentBounds).observe(el.stage);
 window.addEventListener('resize', () => {
   reportContentBounds();
   if (!el.thought.hidden) sendPreview(lastPreviewKey);
+});
+
+// ---------------------------------------------------------------- selection
+
+/**
+ * Ctrl-click gathers clouds; the merge button only exists while at least two
+ * are gathered, so it never sits there greyed out.
+ */
+strip.onSelectionChange = (ids) => {
+  const enough = ids.length >= 2;
+  el.mergeClouds.hidden = !enough;
+  if (enough) {
+    el.mergeLabel.textContent = `Merge ${ids.length} clouds`;
+    el.mergeClouds.title = `Show these ${ids.length} pages side by side`;
+  }
+  reportContentBounds();
+};
+
+el.mergeClouds.addEventListener('click', () => {
+  const ids = [...strip.selected];
+  if (ids.length < 2) return;
+  api.tabs.merge(ids);
+  strip.clearSelection();
+});
+
+// Escape drops a selection, the same way it closes everything else here.
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && strip.selected.size) strip.clearSelection();
 });
 
 // ---------------------------------------------------------------- sidebar

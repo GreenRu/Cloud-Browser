@@ -20,6 +20,7 @@ contextBridge.exposeInMainWorld('cloud', {
     close: (id) => ipcRenderer.send('tab:close', id),
     activate: (id) => ipcRenderer.send('tab:activate', id),
     move: (id, index) => ipcRenderer.send('tab:move', id, index),
+    merge: (ids) => ipcRenderer.send('tab:merge', ids),
     setMuted: (id, muted) => ipcRenderer.send('tab:mute', id, muted)
   },
 

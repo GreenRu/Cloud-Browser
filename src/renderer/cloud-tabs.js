@@ -50,6 +50,9 @@ class CloudTabStrip {
     this.nodes = new Map();
     this.drag = null;
     this.lastWidth = 0;
+    /** Ctrl-clicked clouds, waiting to be merged. */
+    this.selected = new Set();
+    this.onSelectionChange = null;
 
     window.addEventListener('pointermove', (e) => this._onPointerMove(e));
     window.addEventListener('pointerup', () => this._onPointerUp());
@@ -83,6 +86,15 @@ class CloudTabStrip {
         this.root.insertBefore(node.el, this.root.children[index] || null);
       }
     });
+
+    let dropped = false;
+    for (const id of [...this.selected]) {
+      if (!seen.has(id)) {
+        this.selected.delete(id);
+        dropped = true;
+      }
+    }
+    if (dropped) this.onSelectionChange?.([...this.selected]);
 
     for (const [id, node] of this.nodes) {
       if (seen.has(id)) continue;
@@ -135,6 +147,12 @@ class CloudTabStrip {
 
     el.addEventListener('click', (e) => {
       if (e.target.closest('.tab-close') || e.target.closest('.tab-audio')) return;
+      // Ctrl-click gathers clouds instead of switching to one.
+      if (e.ctrlKey || e.metaKey) {
+        this.toggleSelected(tab.id);
+        return;
+      }
+      if (this.selected.size) this.clearSelection();
       this.api.tabs.activate(tab.id);
     });
     close.addEventListener('click', (e) => {
@@ -149,15 +167,44 @@ class CloudTabStrip {
     return { el, icon, title, audio, close };
   }
 
+  // --- selection -----------------------------------------------------------
+
+  toggleSelected(id) {
+    if (this.selected.has(id)) this.selected.delete(id);
+    else this.selected.add(id);
+    this._paintSelection();
+  }
+
+  clearSelection() {
+    if (!this.selected.size) return;
+    this.selected.clear();
+    this._paintSelection();
+  }
+
+  _paintSelection() {
+    for (const [id, node] of this.nodes) {
+      node.el.classList.toggle('selected', this.selected.has(id));
+    }
+    this.onSelectionChange?.([...this.selected]);
+  }
+
   _update(node, tab, isActive) {
     const { el, icon, title, audio } = node;
 
+    el.classList.toggle('selected', this.selected.has(tab.id));
+    el.classList.toggle('merged', (tab.panes || 1) > 1);
     el.classList.toggle('active', isActive);
     el.setAttribute('aria-selected', String(isActive));
     el.title = tab.title ? `${tab.title}\n${tab.url}` : tab.url;
 
-    const label = tab.title || tab.url || 'New Tab';
+    const panes = tab.panes || 1;
+    const label = panes > 1
+      ? `${tab.title || 'Page'} + ${panes - 1}`
+      : tab.title || tab.url || 'New Tab';
     if (title.textContent !== label) title.textContent = label;
+    if (panes > 1 && tab.paneTitles?.length) {
+      el.title = [tab.title, ...tab.paneTitles].filter(Boolean).join(String.fromCharCode(10));
+    }
 
     if (tab.loading) {
       if (icon.className !== 'tab-spinner') {

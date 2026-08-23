@@ -48,6 +48,14 @@ class Tab {
     this.audible = false;
     this.errorUrl = null;   // URL we failed to load, kept visible in the omnibox
 
+    /**
+     * Extra pages shown beside this one after a merge. The tab's own view is
+     * always the first column; these follow it left to right. A merged tab is
+     * still one entry in the strip - one cloud, several pages.
+     */
+    this.extraPanes = [];
+    this.released = false;  // set when another tab has taken this one's view
+
     this._wire({ onOpenTab, onContextMenu });
     this.loadURL(url);
   }
@@ -60,10 +68,39 @@ class Tab {
     return this.view.webContents.isDestroyed();
   }
 
+  /** Every view this tab is responsible for, left to right. */
+  get views() {
+    return [this.view, ...this.extraPanes.map((pane) => pane.view)];
+  }
+
+  get paneCount() {
+    return 1 + this.extraPanes.length;
+  }
+
+  /**
+   * Take over another tab's page, so the two show side by side. The source tab
+   * keeps its webContents alive - only ownership moves - and is marked
+   * released so its own destroy() cannot close what now belongs here.
+   */
+  adopt(other) {
+    if (!other || other === this || other.destroyed) return;
+    this.extraPanes.push({
+      view: other.view,
+      title: other.title,
+      url: other.url,
+      favicon: other.favicon
+    });
+    this.extraPanes.push(...other.extraPanes);
+    other.extraPanes = [];
+    other.released = true;
+  }
+
   /** Serializable snapshot handed to the renderer. */
   serialize() {
     return {
       id: this.id,
+      panes: this.paneCount,
+      paneTitles: this.extraPanes.map((pane) => pane.title),
       url: this.errorUrl || prettifyUrl(this.url),
       title: this.title,
       favicon: this.favicon,
@@ -203,6 +240,12 @@ class Tab {
   }
 
   destroy() {
+    // A released tab's view now belongs to whoever adopted it.
+    if (this.released) return;
+    for (const pane of this.extraPanes) {
+      if (!pane.view.webContents.isDestroyed()) pane.view.webContents.close();
+    }
+    this.extraPanes = [];
     if (!this.destroyed) this.webContents.close();
   }
 }

@@ -74,6 +74,15 @@
 
       <div class="tab-scroll">
         <div class="tabstrip" id="tabstrip" role="tablist" aria-label="Open tabs"></div>
+        <!-- Only present while two or more clouds are selected. -->
+        <button class="merge-clouds" id="merge-clouds" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="3" y="6" width="7.5" height="12" rx="2" />
+            <rect x="13.5" y="6" width="7.5" height="12" rx="2" />
+          </svg>
+          <span id="merge-label">Merge</span>
+        </button>
+
         <button class="new-cloud" id="new-tab" title="New tab (Ctrl+T)" aria-label="New tab">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
           <span>New cloud</span>

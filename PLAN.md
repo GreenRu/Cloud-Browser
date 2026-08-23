@@ -152,13 +152,25 @@ Verify: assertion script for the menu model, one screenshot for the styling.
 
 The largest item. Merging combines the selected tabs into one page.
 
-- [ ] Multi-select in the strip (ctrl/shift click).
-- [ ] Merge action: one tab becomes host, the others' URLs move into it.
-- [ ] Decide the merged layout — split panes or a stack — and animate the clouds
-      moving and scaling into one.
+- [x] Multi-select in the strip: ctrl-click gathers clouds, Escape drops them.
+- [x] Merge action: the selected tab highest in the strip hosts and adopts the
+      others' views. Ownership moves, nothing is closed, and the absorbed tabs
+      leave the strip.
+- [x] Split panes, decided. The stage rect is divided into equal columns with a
+      gutter; a merged cloud is one entry labelled "Title + N".
+- [x] Collapsed sidebar keeps a close badge on the active cloud, so a tab can be
+      closed without expanding first.
 
-This one needs a design decision before code. Do not start it until phases 1–4
-are in and the animation approach is settled.
+Not done: unmerging. Closing a merged cloud closes every pane in it.
+
+Worth remembering from this phase — the single-silhouette problem has now bitten
+three times in three different media, and it will again:
+
+| Where | What went wrong | Fix |
+| --- | --- | --- |
+| CSS lobes | translucent fills compounded at every overlap | opaque fills only |
+| The .ico | GraphicsPath fills even-odd, so overlaps punched holes | `FillMode = Winding` |
+| Selection ring | `box-shadow` outlines each element, drawing seams through the cloud | chained `drop-shadow`, which follows the rendered silhouette |
 
 ## Phase 6 — ship
 

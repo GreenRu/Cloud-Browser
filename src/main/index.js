@@ -112,6 +112,7 @@ function registerIpc() {
   ipcMain.on('tab:close', withShell((s, id) => s.closeTab(id)));
   ipcMain.on('tab:activate', withShell((s, id) => s.activate(id)));
   ipcMain.on('tab:move', withShell((s, id, index) => s.moveTab(id, index)));
+  ipcMain.on('tab:merge', withShell((s, ids) => s.mergeTabs(ids)));
   ipcMain.on('tab:mute', withShell((s, id, muted) => s.tabs.get(id)?.setMuted(muted)));
 
   ipcMain.on('nav:go', withShell((s, input) => s.navigate(input)));

@@ -199,11 +199,21 @@ class BrowserShell {
 
     const [width, height] = this.window.getContentSize();
     const { left, top, right, bottom } = this.insets;
-    tab.view.setBounds({
-      x: left,
-      y: top,
-      width: Math.max(0, width - left - right),
-      height: Math.max(0, height - top - bottom)
+    const boxWidth = Math.max(0, width - left - right);
+    const boxHeight = Math.max(0, height - top - bottom);
+
+    // Merged tabs share the page area as equal columns with a gutter between.
+    const views = tab.views;
+    const gap = views.length > 1 ? 8 : 0;
+    const each = Math.floor((boxWidth - gap * (views.length - 1)) / views.length);
+
+    views.forEach((view, i) => {
+      view.setBounds({
+        x: left + i * (each + gap),
+        y: top,
+        width: i === views.length - 1 ? boxWidth - i * (each + gap) : each,
+        height: boxHeight
+      });
     });
   }
 
@@ -246,12 +256,12 @@ class BrowserShell {
 
     const previous = this.tabs.get(this.activeId);
     if (previous && previous !== tab && !previous.destroyed) {
-      this.window.contentView.removeChildView(previous.view);
+      for (const view of previous.views) this.window.contentView.removeChildView(view);
     }
 
     this.hidePreview();
     this.activeId = id;
-    this.window.contentView.addChildView(tab.view);
+    for (const view of tab.views) this.window.contentView.addChildView(view);
     // The tab view now sits above the preview; lift the preview back on top.
     // Safe here because switching tabs is never mid-keystroke.
     if (this.previewView && !this.previewView.webContents.isDestroyed()) {
@@ -271,7 +281,9 @@ class BrowserShell {
     this.order.splice(index, 1);
     this.tabs.delete(id);
 
-    if (!tab.destroyed) this.window.contentView.removeChildView(tab.view);
+    if (!tab.destroyed) {
+      for (const view of tab.views) this.window.contentView.removeChildView(view);
+    }
     tab.destroy();
 
     if (this.activeId === id) {
@@ -286,6 +298,42 @@ class BrowserShell {
     } else {
       this._broadcast();
     }
+  }
+
+  /**
+   * Show several tabs side by side as one entry.
+   *
+   * The first selected tab hosts: it keeps its place in the strip and takes
+   * ownership of the others' pages, which then leave the strip without their
+   * webContents being closed. One cloud, several columns.
+   */
+  mergeTabs(ids) {
+    if (!Array.isArray(ids) || ids.length < 2) return;
+
+    const tabs = ids.map((id) => this.tabs.get(id)).filter((t) => t && !t.destroyed);
+    if (tabs.length < 2) return;
+
+    // Host is whichever selected tab sits highest in the strip, so the merged
+    // cloud appears where the user was already looking.
+    tabs.sort((a, b) => this.order.indexOf(a.id) - this.order.indexOf(b.id));
+    const [host, ...rest] = tabs;
+
+    for (const other of rest) {
+      if (this.activeId === other.id) this.activeId = host.id;
+      for (const view of other.views) {
+        try {
+          this.window.contentView.removeChildView(view);
+        } catch {
+          // Not attached; nothing to detach.
+        }
+      }
+      host.adopt(other);
+      this.tabs.delete(other.id);
+      const at = this.order.indexOf(other.id);
+      if (at >= 0) this.order.splice(at, 1);
+    }
+
+    this.activate(host.id);
   }
 
   cycleTab(step) {
