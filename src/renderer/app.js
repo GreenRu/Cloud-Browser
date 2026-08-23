@@ -117,8 +117,8 @@ function render(next) {
   const panes = tab?.panes || 1;
   el.splitClouds.hidden = panes < 2;
   if (panes > 1) {
-    el.splitLabel.textContent = `Split ${panes} pages`;
-    el.splitClouds.title = 'Give each page its own cloud again';
+    el.splitLabel.textContent = `Split ${panes} clouds`;
+    el.splitClouds.title = `Give each of these ${panes} pages its own cloud again`;
   }
 
   renderBookmarks();

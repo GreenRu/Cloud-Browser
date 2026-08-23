@@ -538,8 +538,9 @@ svg {
     transform var(--t-mid) var(--spring);
 }
 
-.tab:hover .tab-close,
-.tab.active .tab-close { opacity: 0.55; }
+/* Hovering is what reveals it. Leaving it on the active cloud puts a close
+   button under the pointer on the one tab you are least likely to want gone. */
+.tab:hover .tab-close { opacity: 0.55; }
 .tab-close:hover {
   opacity: 1;
   background: rgba(127, 145, 168, 0.3);
@@ -609,7 +610,6 @@ svg {
   background: var(--danger);
 }
 
-.sidebar.collapsed .tab.active .tab-close,
 .sidebar.collapsed .tab:hover .tab-close { opacity: 0.82; }
 .sidebar.collapsed .tab-close:hover { opacity: 1; }
 
