@@ -49,12 +49,15 @@ class Tab {
     this.errorUrl = null;   // URL we failed to load, kept visible in the omnibox
 
     /**
-     * Extra pages shown beside this one after a merge. The tab's own view is
-     * always the first column; these follow it left to right. A merged tab is
-     * still one entry in the strip - one cloud, several pages.
+     * Tabs shown beside this one after a merge. Whole Tab objects are kept, not
+     * just their views, so a merged tab can be split apart again and so each
+     * pane keeps updating its own title and favicon while merged.
+     *
+     * This tab's own view is always the first column; these follow it left to
+     * right. A merged tab is still one entry in the strip.
      */
     this.extraPanes = [];
-    this.released = false;  // set when another tab has taken this one's view
+    this.hosted = false;  // true while another tab is showing this one
 
     this._wire({ onOpenTab, onContextMenu });
     this.loadURL(url);
@@ -70,7 +73,7 @@ class Tab {
 
   /** Every view this tab is responsible for, left to right. */
   get views() {
-    return [this.view, ...this.extraPanes.map((pane) => pane.view)];
+    return [this.view, ...this.extraPanes.flatMap((pane) => pane.views)];
   }
 
   get paneCount() {
@@ -84,15 +87,24 @@ class Tab {
    */
   adopt(other) {
     if (!other || other === this || other.destroyed) return;
-    this.extraPanes.push({
-      view: other.view,
-      title: other.title,
-      url: other.url,
-      favicon: other.favicon
-    });
-    this.extraPanes.push(...other.extraPanes);
+    // Flatten: merging into an already-merged tab gives one row, not a tree.
+    const incoming = [other, ...other.extraPanes];
     other.extraPanes = [];
-    other.released = true;
+    for (const pane of incoming) {
+      pane.hosted = true;
+      this.extraPanes.push(pane);
+    }
+  }
+
+  /**
+   * Hand the adopted tabs back, in order. They keep their pages; only
+   * ownership returns to them.
+   */
+  release() {
+    const freed = this.extraPanes;
+    this.extraPanes = [];
+    for (const pane of freed) pane.hosted = false;
+    return freed;
   }
 
   /** Serializable snapshot handed to the renderer. */
@@ -240,10 +252,11 @@ class Tab {
   }
 
   destroy() {
-    // A released tab's view now belongs to whoever adopted it.
-    if (this.released) return;
+    // While hosted, this tab's lifetime belongs to whoever adopted it.
+    if (this.hosted) return;
     for (const pane of this.extraPanes) {
-      if (!pane.view.webContents.isDestroyed()) pane.view.webContents.close();
+      pane.hosted = false;
+      pane.destroy();
     }
     this.extraPanes = [];
     if (!this.destroyed) this.webContents.close();

@@ -21,6 +21,7 @@ contextBridge.exposeInMainWorld('cloud', {
     activate: (id) => ipcRenderer.send('tab:activate', id),
     move: (id, index) => ipcRenderer.send('tab:move', id, index),
     merge: (ids) => ipcRenderer.send('tab:merge', ids),
+    split: (id) => ipcRenderer.send('tab:split', id),
     setMuted: (id, muted) => ipcRenderer.send('tab:mute', id, muted)
   },
 
@@ -80,6 +81,7 @@ contextBridge.exposeInMainWorld('cloud', {
     openFind: listen('shell:open-find'),
     savePassword: listen('shell:save-password'),
     previewTarget: listen('shell:preview-target'),
-    previewExpanding: listen('shell:preview-expanding')
+    previewExpanding: listen('shell:preview-expanding'),
+    fullScreen: listen('shell:full-screen')
   }
 });

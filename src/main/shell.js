@@ -73,6 +73,7 @@ class BrowserShell {
     this.previewAttached = false;
     this.previewUrl = null;
     this.previewExpanding = false;
+    this.fullScreen = false;
 
     const bounds = fitToScreen(store.get('window') || {});
     const iconPath = path.join(__dirname, '..', '..', 'assets', 'icon.ico');
@@ -107,8 +108,17 @@ class BrowserShell {
 
     this.window.once('ready-to-show', () => this.window.show());
     this.window.on('resize', () => this._layout());
-    this.window.on('enter-full-screen', () => this._layout());
-    this.window.on('leave-full-screen', () => this._layout());
+    // Full screen means the page, not the page plus furniture.
+    this.window.on('enter-full-screen', () => {
+      this.fullScreen = true;
+      this.send('shell:full-screen', true);
+      this._layout();
+    });
+    this.window.on('leave-full-screen', () => {
+      this.fullScreen = false;
+      this.send('shell:full-screen', false);
+      this._layout();
+    });
     this.window.on('move', () => this._persistBounds());
     this.window.on('resized', () => this._persistBounds());
     // Capture the session while the tabs still exist: by the time 'closed' or
@@ -198,7 +208,10 @@ class BrowserShell {
     if (!tab || tab.destroyed) return;
 
     const [width, height] = this.window.getContentSize();
-    const { left, top, right, bottom } = this.insets;
+    // Full screen drops the insets entirely, so the panes fill the display.
+    const { left, top, right, bottom } = this.fullScreen
+      ? { left: 0, top: 0, right: 0, bottom: 0 }
+      : this.insets;
     const boxWidth = Math.max(0, width - left - right);
     const boxHeight = Math.max(0, height - top - bottom);
 
@@ -334,6 +347,32 @@ class BrowserShell {
     }
 
     this.activate(host.id);
+  }
+
+  /**
+   * Undo a merge: every adopted pane becomes its own entry again, placed
+   * directly after the host so the strip reads in the order they were shown.
+   */
+  splitTab(id) {
+    const host = this.tabs.get(id);
+    if (!host || host.destroyed || host.paneCount < 2) return;
+
+    const freed = host.release();
+    const at = this.order.indexOf(id);
+
+    freed.forEach((pane, i) => {
+      this.tabs.set(pane.id, pane);
+      this.order.splice(at + 1 + i, 0, pane.id);
+      // Only the host stays on screen; the rest wait to be activated.
+      try {
+        this.window.contentView.removeChildView(pane.view);
+      } catch {
+        // Not attached.
+      }
+    });
+
+    this._layout();
+    this._broadcast();
   }
 
   cycleTab(step) {

@@ -17,7 +17,7 @@ const TAB_HEIGHT = 34;
 const LOBE_SPACING = 90; // px of tab width one lobe is expected to cover
 const NARROW_WIDTH = 108;
 
-const { buildLobes } = window.CloudShape;
+const { buildLobes, RAIN_CLOUD } = window.CloudShape;
 
 const ICON_CLOSE =
   '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
@@ -25,8 +25,8 @@ const ICON_AUDIO =
   '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5L6.5 9H4v6h2.5L11 19z"/><path d="M15 9.5a3.5 3.5 0 0 1 0 5"/></svg>';
 const ICON_MUTED =
   '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5L6.5 9H4v6h2.5L11 19z"/><path d="M16 10l4 4M20 10l-4 4"/></svg>';
-const ICON_PAGE =
-  '<svg viewBox="0 0 24 24" aria-hidden="true" style="opacity:.45"><path d="M7 4h7l4 4v12H7z"/><path d="M14 4v4h4"/></svg>';
+// Nothing to show for this page: same raining cloud as everywhere else.
+const ICON_PAGE = RAIN_CLOUD;
 
 /**
  * The browser's own pages have no favicon to fetch, and a blank sheet of paper
@@ -217,9 +217,21 @@ class CloudTabStrip {
       const internal = INTERNAL_ICONS[tab.url];
       const key = internal ? tab.url : tab.favicon || 'page';
       if (icon.dataset.src !== key) {
-        if (internal) icon.innerHTML = internal;
-        else if (tab.favicon) icon.innerHTML = `<img src="${encodeURI(tab.favicon)}" alt="" />`;
-        else icon.innerHTML = ICON_PAGE;
+        if (internal) {
+          icon.innerHTML = internal;
+        } else if (tab.favicon) {
+          icon.innerHTML = `<img src="${encodeURI(tab.favicon)}" alt="" />`;
+          // A favicon that 404s or is an unreadable format leaves an empty
+          // box; fall back to the raining cloud when the load fails.
+          const img = icon.querySelector('img');
+          img.addEventListener('error', () => {
+            icon.innerHTML = ICON_PAGE;
+            icon.classList.add('is-rain');
+          }, { once: true });
+        } else {
+          icon.innerHTML = ICON_PAGE;
+        }
+        icon.classList.toggle('is-rain', !internal && !tab.favicon);
         icon.dataset.src = key;
       }
       icon.classList.toggle('is-internal', Boolean(internal));

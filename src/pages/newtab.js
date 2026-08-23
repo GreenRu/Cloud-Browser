@@ -22,9 +22,9 @@ const QUICK_LINKS = [
 // Nothing hangs below this, so the search bubble always has clear sky to
 // appear in. The bubble is drawn above the field, not inside it.
 
-const CLOUD_GLYPH =
-  '<svg viewBox="0 0 24 24" aria-hidden="true">' +
-  '<path fill="currentColor" d="M6.5 18h11a4 4 0 0 0 .6-7.95A5.5 5.5 0 0 0 7.6 8.6 4.2 4.2 0 0 0 6.5 18Z"/></svg>';
+// A site with no reachable icon gets the same raining cloud the rest of the
+// browser uses for anything that did not load.
+const CLOUD_GLYPH = window.CloudShape.RAIN_CLOUD;
 
 /** Puffy rather than streaky: rounder lobes, and more of them. */
 const PUFFY = { widthRatio: [1.2, 2.05], spacing: 44, maxLobes: 4, overhang: 0.14 };
@@ -52,6 +52,7 @@ function siteIcon(url) {
   img.src = origin + '/favicon.ico';
   img.addEventListener('error', () => {
     holder.innerHTML = CLOUD_GLYPH;
+    holder.classList.add('is-rain');
   });
   holder.appendChild(img);
   return holder;

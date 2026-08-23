@@ -102,5 +102,17 @@
     element.appendChild(fragment);
   }
 
-  global.CloudShape = { hashString, seededRandom, buildLobes };
+  /**
+   * The mark for anything that did not load - a favicon that failed, a page
+   * that would not open. One grey cloud, raining, used everywhere so the
+   * meaning is learned once.
+   */
+  const RAIN_CLOUD =
+    '<svg viewBox="0 0 24 24" aria-hidden="true" class="rain-cloud">' +
+    '<path fill="currentColor" d="M7 15h10a3.6 3.6 0 0 0 .5-7.16A5 5 0 0 0 8.1 6.4 3.8 3.8 0 0 0 7 15Z"/>' +
+    '<path stroke="currentColor" stroke-width="1.7" stroke-linecap="round" fill="none" ' +
+    'd="M8.6 17.6 7.7 20.4M12 17.6l-.9 2.8M15.4 17.6l-.9 2.8"/>' +
+    '</svg>';
+
+  global.CloudShape = { hashString, seededRandom, buildLobes, RAIN_CLOUD };
 })(typeof window !== 'undefined' ? window : globalThis);

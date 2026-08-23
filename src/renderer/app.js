@@ -29,6 +29,8 @@ const el = {
   newTab: $('new-tab'),
   mergeClouds: $('merge-clouds'),
   mergeLabel: $('merge-label'),
+  splitClouds: $('split-clouds'),
+  splitLabel: $('split-label'),
   tabCount: $('tab-count'),
   resizer: $('resizer'),
   findBar: $('find-bar'),
@@ -111,6 +113,13 @@ function render(next) {
 
   el.bookmark.classList.toggle('on', Boolean(state.bookmarked));
   el.bookmark.title = state.bookmarked ? 'Remove bookmark (Ctrl+D)' : 'Bookmark this page (Ctrl+D)';
+
+  const panes = tab?.panes || 1;
+  el.splitClouds.hidden = panes < 2;
+  if (panes > 1) {
+    el.splitLabel.textContent = `Split ${panes} pages`;
+    el.splitClouds.title = 'Give each page its own cloud again';
+  }
 
   renderBookmarks();
   reportContentBounds();
@@ -224,6 +233,11 @@ strip.onSelectionChange = (ids) => {
   }
   reportContentBounds();
 };
+
+el.splitClouds.addEventListener('click', () => {
+  const tab = activeTab();
+  if (tab && (tab.panes || 1) > 1) api.tabs.split(tab.id);
+});
 
 el.mergeClouds.addEventListener('click', () => {
   const ids = [...strip.selected];
@@ -559,6 +573,12 @@ api.on.previewExpanding(() => {
   omniDirty = false;
   hideThought({ notifyMain: false });
   el.address.blur();
+});
+
+api.on.fullScreen((on) => {
+  // The page view already covers the window in full screen; hiding the chrome
+  // stops it painting underneath and keeps the transition clean.
+  document.body.classList.toggle('full-screen', Boolean(on));
 });
 
 api.on.previewTarget(({ url, live }) => {

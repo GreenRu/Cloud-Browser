@@ -161,7 +161,13 @@ The largest item. Merging combines the selected tabs into one page.
 - [x] Collapsed sidebar keeps a close badge on the active cloud, so a tab can be
       closed without expanding first.
 
-Not done: unmerging. Closing a merged cloud closes every pane in it.
+- [x] Unmerging. A Split button appears while the cloud you are on holds more
+      than one page; each pane becomes its own entry again, placed after the
+      host. Whole Tab objects are kept while merged rather than bare views,
+      which is what makes splitting possible - and means panes keep updating
+      their own titles and favicons meanwhile.
+- [x] Full screen hands the whole window to the page: the insets drop to zero
+      and the chrome stops painting.
 
 Worth remembering from this phase — the single-silhouette problem has now bitten
 three times in three different media, and it will again:

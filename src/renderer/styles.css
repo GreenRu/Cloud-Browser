@@ -15,6 +15,8 @@
   --cloud: #ffffff;
   --cloud-idle: #dcecfb;
   --cloud-hover: #eef6fe;
+  --cloud-bright: #ffffff;
+  --close-veil: rgba(28, 48, 74, 0.62);
 
   --text: #22364c;
   --text-dim: #5f7a96;
@@ -27,6 +29,7 @@
   --accent: #2472cf;
   --danger: #d94a4a;
   --stage: #eaf3fc;
+  --rain: #8fa3ba;
   --scroll-thumb: rgba(255, 255, 255, 0.55);
   --bubble: #ffffff;
   --new-cloud-line: rgba(255, 255, 255, 0.6);
@@ -56,6 +59,8 @@
   --cloud: #43597c;
   --cloud-idle: #22314c;
   --cloud-hover: #2c3d5c;
+  --cloud-bright: #5a76a3;
+  --close-veil: rgba(6, 14, 28, 0.68);
 
   --text: #dbe6f6;
   --text-dim: #8299b9;
@@ -67,6 +72,7 @@
   --hover: rgba(255, 255, 255, 0.10);
   --accent: #6aa9ff;
   --stage: #0d1524;
+  --rain: #7c8ea6;
   --scroll-thumb: rgba(255, 255, 255, 0.16);
   --bubble: #1b2740;
   --new-cloud-line: rgba(255, 255, 255, 0.16);
@@ -338,6 +344,17 @@ svg {
 .sidebar.collapsed .merge-clouds span { display: none; }
 .sidebar.collapsed .merge-clouds { width: 38px; margin: 22px auto 0; }
 
+/* Same shape as merge, quieter colour: undoing is not the headline action. */
+.split-clouds {
+  background: var(--hover);
+  color: var(--text-on-sky);
+  box-shadow: none;
+  border: 1.5px solid var(--new-cloud-line);
+}
+
+.split-clouds:hover { background: rgba(255, 255, 255, 0.85); }
+[data-theme="night"] .split-clouds:hover { background: rgba(255, 255, 255, 0.2); }
+
 /* Sits under the lowest cloud and travels with it as tabs are added. */
 .new-cloud {
   display: flex;
@@ -468,6 +485,10 @@ svg {
 .tab-favicon img { width: 16px; height: 16px; object-fit: contain; }
 .tab-favicon svg { width: 16px; height: 16px; }
 
+/* Anything that did not load. Grey and unmistakable, at whatever size. */
+.tab-favicon.is-rain { color: var(--rain); opacity: 0.85; }
+.tab-favicon .rain-cloud { width: 16px; height: 16px; }
+
 /* The browser's own pages draw their mark in the tab's own colour. */
 .tab-favicon.is-internal { color: var(--accent); opacity: 0.9; }
 .tab.active .tab-favicon.is-internal { opacity: 1; }
@@ -561,29 +582,36 @@ svg {
 .sidebar.collapsed #find-open,
 .sidebar.collapsed #theme { display: none; }
 
-/* Collapsed there is no room for a close button inside the circle, so it
-   becomes a badge on the rim - shown for the cloud you are on and for anything
-   you hover, so a tab can be closed without opening the sidebar first. */
-.sidebar.collapsed .tab-close {
-  top: -3px;
-  right: -3px;
+/* Collapsed, the close button sits over the favicon rather than beside it -
+   there is nowhere else for it to go - and stays translucent so the icon it
+   covers is still readable. */
+/* The child selector is deliberate: `.tab > *:not(.lobe)` sets position
+   relative on every child and outranks a plain `.tab-close` rule, so anything
+   less specific than this leaves the button in the flex flow. */
+.sidebar.collapsed .tab > .tab-close {
+  position: absolute;
+  /* inset:0 plus margin:auto is what centres it. Setting either side back to
+     auto breaks that - the box then anchors to the other side instead. */
+  inset: 0;
+  margin: auto;
   transform: none;
-  width: 17px;
-  height: 17px;
-  padding: 3.5px;
-  background: var(--cloud);
-  color: var(--text);
-  box-shadow: 0 1px 4px rgba(16, 44, 76, 0.35);
+  width: 22px;
+  height: 22px;
+  padding: 5px;
+  border-radius: 50%;
+  background: var(--close-veil);
+  color: #fff;
+  backdrop-filter: blur(2px);
 }
 
-.sidebar.collapsed .tab-close:hover {
-  transform: scale(1.15) rotate(90deg);
+.sidebar.collapsed .tab > .tab-close:hover {
+  transform: scale(1.12) rotate(90deg);
   background: var(--danger);
-  color: #fff;
 }
 
 .sidebar.collapsed .tab.active .tab-close,
-.sidebar.collapsed .tab:hover .tab-close { opacity: 1; }
+.sidebar.collapsed .tab:hover .tab-close { opacity: 0.82; }
+.sidebar.collapsed .tab-close:hover { opacity: 1; }
 
 .sidebar.collapsed .sidebar-head { flex-direction: column; height: auto; padding: 8px 0 0; gap: 8px; }
 .sidebar.collapsed .omnibox { margin: 8px auto 0; width: 34px; padding: 0; justify-content: center; cursor: pointer; }
@@ -609,9 +637,11 @@ svg {
 
 .sidebar.collapsed .tab:hover { transform: scale(1.06); }
 
+/* Collapsed, the cloud you are on is simply brighter. A ring around a circle
+   this small reads as clutter. */
 .sidebar.collapsed .tab.active {
   transform: none;
-  box-shadow: 0 0 0 2px var(--accent);
+  background: var(--cloud-bright);
 }
 
 .sidebar.collapsed .new-cloud {
@@ -744,6 +774,14 @@ svg {
   from { transform: translateX(-3px); }
   to { transform: translateX(3px); }
 }
+
+/* Full screen belongs to the page. The view already covers the window, so
+   this only stops the chrome painting behind it. */
+body.full-screen .sidebar,
+body.full-screen .titlestrip,
+body.full-screen .drawer { display: none; }
+
+body.full-screen .stage { margin: 0; border-radius: 0; }
 
 /* ---------- main column ---------- */
 
