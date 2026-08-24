@@ -416,6 +416,108 @@ svg {
   to { opacity: 1; transform: none; }
 }
 
+/* ---------- a cloud's own menu ---------- */
+
+.cloud-menu {
+  position: fixed;
+  z-index: 40;
+  min-width: 210px;
+  padding: 6px;
+  border-radius: 15px;
+  background: var(--bubble);
+  box-shadow: 0 18px 40px rgba(16, 44, 76, 0.3), 0 2px 8px rgba(16, 44, 76, 0.16);
+  animation: cloud-menu-in 150ms var(--spring-big) both;
+}
+
+.cloud-menu[hidden] { display: none; }
+
+@keyframes cloud-menu-in {
+  from { opacity: 0; transform: scale(0.94) translateY(-6px); }
+  to { opacity: 1; transform: none; }
+}
+
+.cloud-menu button {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  padding: 7px 12px;
+  border-radius: 10px;
+  text-align: left;
+  font-size: 12.5px;
+  font-weight: 550;
+  color: var(--text);
+  transition: background var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+
+.cloud-menu button span { flex: 1 1 auto; }
+
+/* The shortcut an item already has, quietly, on the right. */
+.cloud-menu kbd {
+  flex: 0 0 auto;
+  font: inherit;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.cloud-menu button:hover:not(:disabled),
+.cloud-menu button:focus-visible:not(:disabled) {
+  background: var(--hover);
+  outline: none;
+}
+
+.cloud-menu button:disabled { opacity: 0.4; cursor: default; }
+
+.cloud-menu button.danger:hover:not(:disabled) {
+  background: rgba(217, 74, 74, 0.16);
+  color: var(--danger);
+}
+
+.cloud-menu hr {
+  height: 1px;
+  margin: 5px 8px;
+  border: 0;
+  background: var(--field-line);
+}
+
+/* ---------- dragging a cloud ---------- */
+
+/*
+ * Held: out of the flow, following the pointer, tilted and lifted off the sky.
+ * The script sets where it is; this is what being carried looks like.
+ */
+.tab.dragging {
+  position: fixed;
+  z-index: 30;
+  margin: 0;
+  pointer-events: none;
+  cursor: grabbing;
+  transform: scale(1.04) rotate(-1.4deg);
+  filter: drop-shadow(0 14px 22px rgba(16, 44, 76, 0.34));
+  animation: none;   /* the entrance animation would fight the transform */
+  transition: transform var(--t-mid) var(--spring), filter var(--t-mid) var(--ease);
+}
+
+/* Let go: it travels to the gap rather than appearing in it. */
+.tab.landing {
+  transition: top 180ms var(--ease), left 180ms var(--ease),
+    transform 180ms var(--ease), filter 180ms var(--ease);
+  transform: none;
+  filter: drop-shadow(0 3px 6px rgba(16, 44, 76, 0.26));
+}
+
+/* The space it will drop into. The clouds around it move by the strip's own
+   layout, so nothing has to be told where to go. */
+.tab-gap {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  border: 1.5px dashed var(--new-cloud-line);
+  background: var(--hover);
+  opacity: 0.75;
+}
+
+body.dragging-cloud { cursor: grabbing; }
+
 /* A cloud that has joined another slides up to it and passes behind it. Taken
    out of the flow first, so the strip closes up as it goes rather than after.
    The script supplies the coordinates; this is the manner of the move. */

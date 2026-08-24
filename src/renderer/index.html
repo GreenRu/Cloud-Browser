@@ -135,6 +135,11 @@
       </div>
     </div>
 
+    <!-- A cloud's own menu, drawn here rather than by the system so it looks
+         like the browser it belongs to. What is on it is decided by the main
+         process, which knows the state; this only shows it. -->
+    <div class="cloud-menu" id="cloud-menu" hidden role="menu"></div>
+
     <!-- The seams between merged panes. They are the one part of the page area
          the chrome can still draw in - everything else is covered by the views -
          so the handle for resizing panes lives here rather than in the page. -->

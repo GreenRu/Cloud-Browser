@@ -103,7 +103,10 @@ class CloudTabStrip {
         this.nodes.set(tab.id, node);
       }
       this._update(node, tab, tab.id === activeId);
-      // Keep DOM order in step with model order without rebuilding the strip.
+      // Keep DOM order in step with model order without rebuilding the strip -
+      // except while a cloud is being held, when the order on screen is the
+      // user's and the browser's copy of it is one step behind.
+      if (this.drag && this.drag.active) return;
       if (this.root.children[index] !== node.el) {
         this.root.insertBefore(node.el, this.root.children[index] || null);
       }
@@ -194,7 +197,7 @@ class CloudTabStrip {
     // when more than one cloud is picked.
     el.addEventListener('contextmenu', (event) => {
       event.preventDefault();
-      this.api.tabs.menu(tab.id, event.clientX, event.clientY, [...this.selected]);
+      this.onCloudMenu?.(tab.id, event.clientX, event.clientY, [...this.selected]);
     });
 
     close.addEventListener('click', (e) => {
@@ -500,29 +503,97 @@ class CloudTabStrip {
     if (event.button !== 0) return;
     const el = event.target.closest('.tab');
     if (!el || event.target.closest('.tab-close') || event.target.closest('.tab-audio')) return;
-    this.drag = { id: el.dataset.id, el, startY: event.clientY, active: false };
+
+    this.drag = {
+      id: el.dataset.id,
+      el,
+      startY: event.clientY,
+      // Where in the cloud it was taken hold of, so it does not jump on lift.
+      grabbedAt: event.clientY - el.getBoundingClientRect().top,
+      active: false
+    };
+  }
+
+  /**
+   * Pick the cloud up.
+   *
+   * It comes out of the flow and follows the pointer, and a gap of its own size
+   * takes its place in the strip. The gap is a real element, so the clouds
+   * around it move by the strip's own layout rather than by anything here
+   * having to work out where they should go.
+   */
+  _liftCloud(event) {
+    const drag = this.drag;
+    const box = drag.el.getBoundingClientRect();
+
+    const gap = document.createElement('div');
+    gap.className = 'tab-gap';
+    gap.style.height = `${box.height}px`;
+    this.root.insertBefore(gap, drag.el);
+
+    drag.gap = gap;
+    drag.width = box.width;
+    drag.left = box.left;
+    drag.active = true;
+
+    drag.el.classList.add('dragging');
+    drag.el.style.width = `${box.width}px`;
+    drag.el.style.left = `${box.left}px`;
+    drag.el.style.top = `${event.clientY - drag.grabbedAt}px`;
+    document.body.classList.add('dragging-cloud');
   }
 
   _onPointerMove(event) {
     if (!this.drag) return;
-    if (!this.drag.active && Math.abs(event.clientY - this.drag.startY) < 6) return;
-    this.drag.active = true;
-    this.drag.el.style.opacity = '0.7';
+    if (!this.drag.active) {
+      if (Math.abs(event.clientY - this.drag.startY) < 6) return;
+      this._liftCloud(event);
+    }
 
-    const siblings = [...this.root.children];
-    const index = siblings.findIndex((el) => {
+    const drag = this.drag;
+    drag.el.style.top = `${event.clientY - drag.grabbedAt}px`;
+
+    // Where it would land: the first cloud whose middle is below the pointer.
+    const others = [...this.root.children].filter((el) => el !== drag.el && el !== drag.gap);
+    const before = others.find((el) => {
       const box = el.getBoundingClientRect();
       return event.clientY < box.top + box.height / 2;
     });
-    this.drag.targetIndex = index === -1 ? siblings.length - 1 : index;
+
+    if (before) this.root.insertBefore(drag.gap, before);
+    else this.root.appendChild(drag.gap);
   }
 
   _onPointerUp() {
     if (!this.drag) return;
-    const { id, el, active, targetIndex } = this.drag;
+    const drag = this.drag;
     this.drag = null;
-    el.style.opacity = '';
-    if (active && Number.isInteger(targetIndex)) this.api.tabs.move(id, targetIndex);
+
+    if (!drag.active) return;
+
+    const index = [...this.root.children]
+      .filter((el) => el !== drag.el)
+      .indexOf(drag.gap);
+
+    // Settle into the gap before letting go of it, so the cloud arrives rather
+    // than teleports.
+    const landing = drag.gap.getBoundingClientRect();
+    drag.el.classList.add('landing');
+    drag.el.style.top = `${landing.top}px`;
+    drag.el.style.left = `${landing.left}px`;
+
+    const release = () => {
+      drag.el.classList.remove('dragging', 'landing');
+      drag.el.style.width = '';
+      drag.el.style.left = '';
+      drag.el.style.top = '';
+      drag.gap.remove();
+      document.body.classList.remove('dragging-cloud');
+      if (index >= 0) this.api.tabs.move(drag.id, index);
+    };
+
+    drag.el.addEventListener('transitionend', release, { once: true });
+    setTimeout(release, 260);
   }
 }
 

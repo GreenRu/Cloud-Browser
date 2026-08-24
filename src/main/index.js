@@ -119,7 +119,8 @@ function registerIpc() {
   ipcMain.on('tab:pane-sizes', withShell((s, id, sizes) => s.setPaneSizes(id, sizes)));
   ipcMain.on('tab:split', withShell((s, id) => s.splitTab(id)));
   ipcMain.on('tab:merge', withShell((s, ids) => s.mergeTabs(ids)));
-  ipcMain.on('tab:menu', withShell((s, id, x, y, selected) => s.showTabMenu(id, x, y, selected)));
+  ipcMain.handle('tab:menu', withShell((s, id, selected) => s.tabMenu(id, selected)));
+  ipcMain.on('tab:menu-run', withShell((s, id, action, selected) => s.runTabMenu(id, action, selected)));
   ipcMain.on('tab:reopen', withShell((s) => s.reopenClosedTab()));
   ipcMain.on('tab:mute', withShell((s, id, muted) => s.tabs.get(id)?.setMuted(muted)));
 

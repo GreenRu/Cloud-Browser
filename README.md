@@ -38,6 +38,8 @@ npm start
   one cloud showing several pages side by side. The seam between panes is
   draggable like a window splitter, and splitting them apart gives each its own
   cloud back with its page intact.
+- **Drag a cloud** and it comes up out of the strip, tilted and shadowed under
+  the pointer, with a gap opening where it will land.
 - **A menu on every cloud.** Right-click one for reload, duplicate, mute,
   bookmark, copy address, move to top or bottom, reopen the last closed cloud,
   merge the ones you have picked or split a merged one, and close this / the

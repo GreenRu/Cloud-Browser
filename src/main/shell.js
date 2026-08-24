@@ -1343,84 +1343,90 @@ class BrowserShell {
    * `selected` is whatever is ctrl-clicked at the time, which decides whether
    * merging is on offer.
    */
-  showTabMenu(id, x, y, selected = []) {
+  /**
+   * What a cloud's menu offers, as a description rather than a menu.
+   *
+   * The chrome draws it, because a menu that matches the browser it belongs to
+   * beats one that matches the operating system - and the strip is one of the
+   * few places the chrome can draw at all. What is *on* offer is decided here,
+   * where the state is: which cloud, what is picked, what has been closed.
+   */
+  tabMenu(id, selected = []) {
     const tab = this.tabs.get(id);
-    if (!tab || tab.destroyed || this.window.isDestroyed()) return;
+    if (!tab || tab.destroyed) return null;
 
     const at = this.order.indexOf(id);
     const chosen = selected.filter((tabId) => this.tabs.has(tabId));
-    const bookmarked = this.store.isBookmarked(tab.url);
-
     const items = [
-      { label: 'Reload cloud', accelerator: 'CmdOrCtrl+R', click: () => tab.reload() },
-      { label: 'Duplicate cloud', click: () => this.duplicateTab(id) },
-      {
-        label: tab.muted ? 'Unmute cloud' : 'Mute cloud',
-        click: () => {
-          tab.setMuted(!tab.muted);
-          this._broadcast();
-        }
-      },
+      { id: 'reload', label: 'Reload cloud', accelerator: 'Ctrl+R' },
+      { id: 'duplicate', label: 'Duplicate cloud' },
+      { id: 'mute', label: tab.muted ? 'Unmute cloud' : 'Mute cloud' },
       { type: 'separator' },
       {
-        label: bookmarked ? 'Remove bookmark' : 'Bookmark this page',
-        accelerator: 'CmdOrCtrl+D',
-        click: () => {
-          this.store.toggleBookmark({ url: tab.url, title: tab.title });
-          this._broadcast();
-        }
+        id: 'bookmark',
+        label: this.store.isBookmarked(tab.url) ? 'Remove bookmark' : 'Bookmark this page',
+        accelerator: 'Ctrl+D'
       },
-      { label: 'Copy address', click: () => clipboard.writeText(prettifyUrl(tab.url)) }
+      { id: 'copy', label: 'Copy address' }
     ];
 
     // Only when there is something to do it to.
     if (chosen.length > 1) {
-      items.push(
-        { type: 'separator' },
-        { label: `Merge ${chosen.length} clouds`, click: () => this.mergeTabs(chosen) }
-      );
+      items.push({ type: 'separator' },
+        { id: 'merge', label: `Merge ${chosen.length} clouds` });
     } else if (tab.paneCount > 1) {
-      items.push(
-        { type: 'separator' },
-        { label: `Split into ${tab.paneCount} clouds`, click: () => this.splitTab(id) }
-      );
+      items.push({ type: 'separator' },
+        { id: 'split', label: `Split into ${tab.paneCount} clouds` });
     }
 
     items.push(
       { type: 'separator' },
-      { label: 'Move to top', enabled: at > 0, click: () => this.moveTab(id, 0) },
-      {
-        label: 'Move to bottom',
-        enabled: at < this.order.length - 1,
-        click: () => this.moveTab(id, this.order.length - 1)
-      },
+      { id: 'top', label: 'Move to top', enabled: at > 0 },
+      { id: 'bottom', label: 'Move to bottom', enabled: at < this.order.length - 1 },
       { type: 'separator' },
-      {
-        label: 'Reopen closed cloud',
-        accelerator: 'CmdOrCtrl+Shift+T',
-        enabled: this.closed.length > 0,
-        click: () => this.reopenClosedTab()
-      },
+      { id: 'reopen', label: 'Reopen closed cloud', accelerator: 'Ctrl+Shift+T', enabled: this.closed.length > 0 },
       { type: 'separator' },
-      { label: 'Close cloud', accelerator: 'CmdOrCtrl+W', click: () => this.closeTab(id) },
-      {
-        label: 'Close other clouds',
-        enabled: this.order.length > 1,
-        click: () => this.closeOtherTabs(id)
-      },
-      {
-        label: 'Close clouds below',
-        enabled: at < this.order.length - 1,
-        click: () => this.closeTabsBelow(id)
-      }
+      { id: 'close', label: 'Close cloud', accelerator: 'Ctrl+W', danger: true },
+      { id: 'close-others', label: 'Close other clouds', enabled: this.order.length > 1, danger: true },
+      { id: 'close-below', label: 'Close clouds below', enabled: at < this.order.length - 1, danger: true }
     );
 
-    this.tabMenu = Menu.buildFromTemplate(items);
-    this.tabMenu.popup({
-      window: this.window,
-      x: Math.round(x),
-      y: Math.round(y)
-    });
+    return {
+      tabId: id,
+      title: tab.title || prettifyUrl(tab.url),
+      items: items.map((item) => ({ enabled: true, ...item }))
+    };
+  }
+
+  /** Do what was chosen from it. Nothing here trusts the label, only the name. */
+  runTabMenu(id, action, selected = []) {
+    const tab = this.tabs.get(id);
+    if (!tab || tab.destroyed) return;
+
+    const chosen = selected.filter((tabId) => this.tabs.has(tabId));
+
+    switch (action) {
+      case 'reload': tab.reload(); break;
+      case 'duplicate': this.duplicateTab(id); break;
+      case 'mute':
+        tab.setMuted(!tab.muted);
+        this._broadcast();
+        break;
+      case 'bookmark':
+        this.store.toggleBookmark({ url: tab.url, title: tab.title });
+        this._broadcast();
+        break;
+      case 'copy': clipboard.writeText(prettifyUrl(tab.url)); break;
+      case 'merge': if (chosen.length > 1) this.mergeTabs(chosen); break;
+      case 'split': this.splitTab(id); break;
+      case 'top': this.moveTab(id, 0); break;
+      case 'bottom': this.moveTab(id, this.order.length - 1); break;
+      case 'reopen': this.reopenClosedTab(); break;
+      case 'close': this.closeTab(id); break;
+      case 'close-others': this.closeOtherTabs(id); break;
+      case 'close-below': this.closeTabsBelow(id); break;
+      default: break;
+    }
   }
 
   _showPageContextMenu(tab, params) {
