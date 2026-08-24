@@ -71,7 +71,9 @@ open. Two things follow from it:
   page. What is *on* it is decided in the main process, where the state is -
   which cloud, what is picked, what has been closed - and sent to that view as a
   description it turns into buttons. It sends back the name of whatever was
-  chosen, and nothing there is trusted but the name.
+  chosen, and nothing there is trusted but the name. It is drawn as a cloud, by
+  the same lobe generator the strip uses, and the view is padded so the lobes
+  have somewhere to rise into rather than being clipped at its edge.
 
 Activating a cloud adds its views, which puts them on top, so the card and the
 previews are lifted back afterwards — frame first, previews over it.

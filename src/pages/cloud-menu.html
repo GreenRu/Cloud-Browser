@@ -14,8 +14,10 @@
        * sidebar, which is most of the time. This is a view of its own, stacked
        * above the page, so it can be as wide as it likes.
        *
-       * The body is transparent and padded, so the card's shadow has somewhere
-       * to fall inside the view rather than being clipped at its edge.
+       * It is a cloud, like everything else in the strip: a rounded body with
+       * lobes rising off its top edge, drawn by the same generator the tabs
+       * use. The body is transparent and padded so those lobes have somewhere
+       * to rise into rather than being clipped at the view's edge.
        */
       :root {
         --bubble: #ffffff;
@@ -48,18 +50,38 @@
         cursor: default;
       }
 
-      /* The padding is the room the shadow falls into. */
-      body { padding: 14px; }
+      /*
+       * The room the lobes need. Up top they rise about half their own height
+       * above the card; at the sides a lobe is drawn from its centre, so one
+       * near an edge reaches out by half its width. The view is transparent,
+       * so this costs nothing but room.
+       */
+      body { padding: 34px 44px 8px; }
 
       .menu {
+        position: relative;
         display: inline-block;
         min-width: 210px;
-        padding: 6px;
-        border-radius: 15px;
+        padding: 8px 6px 6px;
+        border-radius: 22px;
         background: var(--bubble);
-        box-shadow: 0 18px 40px rgba(16, 44, 76, 0.3), 0 2px 8px rgba(16, 44, 76, 0.16);
         animation: menu-in 150ms cubic-bezier(0.22, 1.6, 0.4, 1) both;
       }
+
+      /*
+       * The lobes take the body's fill and sit behind it, so the whole card
+       * reads as one cloud rather than a box with bumps on top.
+       */
+      .lobe {
+        position: absolute;
+        border-radius: 999px;
+        background: inherit;
+        transform: translateX(-50%);
+        pointer-events: none;
+        z-index: -1;
+      }
+
+      .menu > *:not(.lobe) { position: relative; z-index: 1; }
 
       @keyframes menu-in {
         from { opacity: 0; transform: scale(0.94) translateY(-6px); }
@@ -118,6 +140,7 @@
   </head>
   <body>
     <div class="menu" id="menu" role="menu"></div>
+    <script src="../shared/clouds.js"></script>
     <script src="./cloud-menu.js"></script>
   </body>
 </html>

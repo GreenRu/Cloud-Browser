@@ -40,7 +40,8 @@ npm start
   cloud back with its page intact.
 - **Drag a cloud** and it comes up out of the strip, tilted and shadowed under
   the pointer, with a gap opening where it will land.
-- **A menu on every cloud.** Right-click one for reload, duplicate, mute,
+- **A menu on every cloud**, drawn as a cloud itself. Right-click one for
+  reload, duplicate, mute,
   bookmark, copy address, move to top or bottom, reopen the last closed cloud,
   merge the ones you have picked or split a merged one, and close this / the
   others / everything below.

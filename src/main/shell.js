@@ -757,19 +757,21 @@ class BrowserShell {
    * Called back once the menu has drawn itself and knows its size. Placed at
    * the pointer, then pulled back inside the window if it would hang off.
    */
-  placeCloudMenu(width, height) {
-    if (!this.menuOpen || !this.menuView || this.window.isDestroyed()) return;
+  placeCloudMenu(size) {
+    if (!this.menuOpen || !this.menuView || this.window.isDestroyed() || !size) return;
 
     const [w, h] = this.window.getContentSize();
     const { x, y } = this.menuOpen;
-    // The card sits inside its own padding, so the pointer is offset by it.
-    const pad = 14;
+    const width = Math.min(Math.round(size.width), w);
+    const height = Math.min(Math.round(size.height), h);
 
+    // The card sits inside the view's own padding - the room the lobes rise
+    // into - so the pointer is offset by however much that turned out to be.
     this.menuView.setBounds({
-      x: Math.max(0, Math.min(Math.round(x) - pad, w - width)),
-      y: Math.max(0, Math.min(Math.round(y) - pad, h - height)),
-      width: Math.min(width, w),
-      height: Math.min(height, h)
+      x: Math.max(0, Math.min(Math.round(x - (size.offsetX || 0)), w - width)),
+      y: Math.max(0, Math.min(Math.round(y - (size.offsetY || 0)), h - height)),
+      width,
+      height
     });
 
     // Above everything, including whatever the active cloud added.

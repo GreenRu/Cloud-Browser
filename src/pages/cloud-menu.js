@@ -41,11 +41,32 @@ bridge?.onMenu?.((menu) => {
     root.appendChild(button);
   }
 
+  // A cloud, like everything else in the strip. Seeded by what the menu is
+  // for, so the same cloud's menu keeps the same shape each time it opens.
+  window.CloudShape.buildLobes(root, `menu-${menu.tabId}`, {
+    width: root.offsetWidth,
+    base: 30,
+    spacing: 84,
+    minLobes: 2,
+    maxLobes: 4,
+    overhang: 0,
+    widthRatio: [1.5, 2.6]
+  });
+
   // The browser cannot know how big this turned out until it is drawn, so it
-  // is told - including the room the shadow needs on every side.
+  // is told - and where the card sits inside the view, so the pointer lands on
+  // the card rather than on the room left for the lobes.
+  const style = getComputedStyle(document.body);
+  const left = parseFloat(style.paddingLeft) || 0;
+  const top = parseFloat(style.paddingTop) || 0;
   const box = root.getBoundingClientRect();
-  const pad = parseFloat(getComputedStyle(document.body).paddingLeft) || 0;
-  bridge.measured(Math.ceil(box.width + pad * 2), Math.ceil(box.height + pad * 2));
+
+  bridge.measured({
+    width: Math.ceil(box.width + left * 2),
+    height: Math.ceil(box.height + top + (parseFloat(style.paddingBottom) || 0)),
+    offsetX: left,
+    offsetY: top
+  });
 
   root.querySelector('button:not(:disabled)')?.focus();
 });

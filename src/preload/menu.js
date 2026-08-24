@@ -16,8 +16,8 @@ contextBridge.exposeInMainWorld('cloudMenu', {
     ipcRenderer.on('menu:show', handler);
     return () => ipcRenderer.removeListener('menu:show', handler);
   },
-  /** How big the card turned out, so the view can be made to fit it. */
-  measured: (width, height) => ipcRenderer.send('menu:size', width, height),
+  /** How big the card turned out, and where in the view it sits. */
+  measured: (size) => ipcRenderer.send('menu:size', size),
   run: (action) => ipcRenderer.send('menu:run', action),
   close: () => ipcRenderer.send('menu:close')
 });

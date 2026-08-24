@@ -133,7 +133,7 @@ function registerIpc() {
     handler(s, ...args);
   };
 
-  ipcMain.on('menu:size', fromMenu((s, width, height) => s.placeCloudMenu(width, height)));
+  ipcMain.on('menu:size', fromMenu((s, size) => s.placeCloudMenu(size)));
   ipcMain.on('menu:run', fromMenu((s, action) => s.runCloudMenu(action)));
   ipcMain.on('menu:close', fromMenu((s) => s.hideCloudMenu()));
   ipcMain.on('tab:reopen', withShell((s) => s.reopenClosedTab()));
