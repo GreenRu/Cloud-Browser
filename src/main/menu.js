@@ -206,6 +206,11 @@ function buildAppMenu(getShell, plugins = null) {
           click: withShell((s) => s.newTab('stratus://history'))
         },
         {
+          label: 'Reopen Closed Cloud',
+          accelerator: 'CommandOrControl+Shift+T',
+          click: withShell((s) => s.reopenClosedTab())
+        },
+        {
           label: 'Show Bookmarks',
           accelerator: 'CommandOrControl+Shift+O',
           click: withShell((s) => s.newTab('stratus://bookmarks'))

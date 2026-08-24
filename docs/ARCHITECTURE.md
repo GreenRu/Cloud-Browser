@@ -64,6 +64,9 @@ open. Two things follow from it:
   invisible the entire time — every measurement correct, nothing on screen.
 - The grip on the seam between merged panes *is* chrome HTML, and works,
   because the seam is the one part of the page area no view covers.
+- The menu on a cloud is native, and can be, because the strip is chrome too.
+  The new tab page's menu on a shortcut cloud is HTML instead - that one is
+  drawn by a page, which cannot ask the browser to open a menu for it.
 
 Activating a cloud adds its views, which puts them on top, so the card and the
 previews are lifted back afterwards — frame first, previews over it.

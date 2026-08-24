@@ -88,6 +88,12 @@ class BrowserShell {
     this.insets = { ...DEFAULT_INSETS };
     this.gutters = [];
     this.findQuery = '';
+    /**
+     * The last few clouds closed, newest first, so one can be brought back.
+     * Only where they were and what they were showing - the page itself is
+     * gone, and is loaded again from scratch.
+     */
+    this.closed = [];
     /** The plugin host, when the browser was started with one. */
     this.plugins = plugins;
     /**
@@ -433,6 +439,13 @@ class BrowserShell {
     this.hidePreview();
 
     const index = this.order.indexOf(id);
+
+    // Worth remembering, unless it was showing nothing worth coming back to.
+    const url = prettifyUrl(tab.url);
+    if (url && url !== 'about:blank') {
+      this.closed.unshift({ url, title: tab.title, index });
+      this.closed.length = Math.min(this.closed.length, 10);
+    }
     this.order.splice(index, 1);
     this.tabs.delete(id);
 
@@ -453,6 +466,41 @@ class BrowserShell {
     } else {
       this._broadcast();
     }
+  }
+
+  /** Bring back the cloud closed most recently, where it was. */
+  reopenClosedTab() {
+    const last = this.closed.shift();
+    if (!last) return null;
+
+    const tab = this.newTab(last.url);
+    if (tab && last.index >= 0 && last.index < this.order.length) {
+      this.moveTab(tab.id, last.index);
+    }
+    return tab;
+  }
+
+  /** The same page again, in a cloud of its own, next to the one it came from. */
+  duplicateTab(id) {
+    const tab = this.tabs.get(id);
+    if (!tab || tab.destroyed) return null;
+
+    const copy = this.newTab(prettifyUrl(tab.url), { background: true });
+    if (copy) this.moveTab(copy.id, this.order.indexOf(id) + 1);
+    return copy;
+  }
+
+  /** Everything but this one. */
+  closeOtherTabs(id) {
+    if (!this.tabs.has(id)) return;
+    for (const other of this.order.filter((tabId) => tabId !== id)) this.closeTab(other);
+  }
+
+  /** Everything under this one in the strip. */
+  closeTabsBelow(id) {
+    const at = this.order.indexOf(id);
+    if (at < 0) return;
+    for (const below of this.order.slice(at + 1)) this.closeTab(below);
   }
 
   /**
@@ -1284,6 +1332,96 @@ class BrowserShell {
   }
 
   // --- context menu --------------------------------------------------------
+
+  /**
+   * The menu on a cloud in the strip.
+   *
+   * Native rather than drawn: the strip is one of the few places the chrome can
+   * draw at all, but a real menu comes with keyboard handling, the platform's
+   * own look, and somewhere to show the shortcut each item already has.
+   *
+   * `selected` is whatever is ctrl-clicked at the time, which decides whether
+   * merging is on offer.
+   */
+  showTabMenu(id, x, y, selected = []) {
+    const tab = this.tabs.get(id);
+    if (!tab || tab.destroyed || this.window.isDestroyed()) return;
+
+    const at = this.order.indexOf(id);
+    const chosen = selected.filter((tabId) => this.tabs.has(tabId));
+    const bookmarked = this.store.isBookmarked(tab.url);
+
+    const items = [
+      { label: 'Reload cloud', accelerator: 'CmdOrCtrl+R', click: () => tab.reload() },
+      { label: 'Duplicate cloud', click: () => this.duplicateTab(id) },
+      {
+        label: tab.muted ? 'Unmute cloud' : 'Mute cloud',
+        click: () => {
+          tab.setMuted(!tab.muted);
+          this._broadcast();
+        }
+      },
+      { type: 'separator' },
+      {
+        label: bookmarked ? 'Remove bookmark' : 'Bookmark this page',
+        accelerator: 'CmdOrCtrl+D',
+        click: () => {
+          this.store.toggleBookmark({ url: tab.url, title: tab.title });
+          this._broadcast();
+        }
+      },
+      { label: 'Copy address', click: () => clipboard.writeText(prettifyUrl(tab.url)) }
+    ];
+
+    // Only when there is something to do it to.
+    if (chosen.length > 1) {
+      items.push(
+        { type: 'separator' },
+        { label: `Merge ${chosen.length} clouds`, click: () => this.mergeTabs(chosen) }
+      );
+    } else if (tab.paneCount > 1) {
+      items.push(
+        { type: 'separator' },
+        { label: `Split into ${tab.paneCount} clouds`, click: () => this.splitTab(id) }
+      );
+    }
+
+    items.push(
+      { type: 'separator' },
+      { label: 'Move to top', enabled: at > 0, click: () => this.moveTab(id, 0) },
+      {
+        label: 'Move to bottom',
+        enabled: at < this.order.length - 1,
+        click: () => this.moveTab(id, this.order.length - 1)
+      },
+      { type: 'separator' },
+      {
+        label: 'Reopen closed cloud',
+        accelerator: 'CmdOrCtrl+Shift+T',
+        enabled: this.closed.length > 0,
+        click: () => this.reopenClosedTab()
+      },
+      { type: 'separator' },
+      { label: 'Close cloud', accelerator: 'CmdOrCtrl+W', click: () => this.closeTab(id) },
+      {
+        label: 'Close other clouds',
+        enabled: this.order.length > 1,
+        click: () => this.closeOtherTabs(id)
+      },
+      {
+        label: 'Close clouds below',
+        enabled: at < this.order.length - 1,
+        click: () => this.closeTabsBelow(id)
+      }
+    );
+
+    this.tabMenu = Menu.buildFromTemplate(items);
+    this.tabMenu.popup({
+      window: this.window,
+      x: Math.round(x),
+      y: Math.round(y)
+    });
+  }
 
   _showPageContextMenu(tab, params) {
     const items = [];

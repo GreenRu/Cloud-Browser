@@ -38,6 +38,10 @@ npm start
   one cloud showing several pages side by side. The seam between panes is
   draggable like a window splitter, and splitting them apart gives each its own
   cloud back with its page intact.
+- **A menu on every cloud.** Right-click one for reload, duplicate, mute,
+  bookmark, copy address, move to top or bottom, reopen the last closed cloud,
+  merge the ones you have picked or split a merged one, and close this / the
+  others / everything below.
 - **No top chrome.** Address bar, navigation and menus all live in the sidebar,
   which resizes by dragging its edge and collapses to icons on a double-click.
 - **Full screen** hands the whole window to the pages: no furniture, no seam
@@ -112,6 +116,7 @@ Writing your own is [docs/PLUGINS.md](docs/PLUGINS.md).
 | Shortcut | Action |
 | --- | --- |
 | `Ctrl+T` / `Ctrl+W` | New tab / close tab |
+| `Ctrl+Shift+T` | Reopen the cloud you closed last |
 | `Ctrl+Tab` / `Ctrl+Shift+Tab` | Next / previous tab |
 | `Ctrl+1`…`Ctrl+8`, `Ctrl+9` | Nth tab, last tab |
 | `Ctrl+L`, `Alt+D` | Focus the address bar |

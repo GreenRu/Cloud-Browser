@@ -189,6 +189,14 @@ class CloudTabStrip {
       if (this.selected.size) this.clearSelection();
       this.api.tabs.activate(tab.id);
     });
+    // A cloud's own menu. The strip is chrome, so the browser can put a real
+    // one here; the selection goes with it, because merging is only on offer
+    // when more than one cloud is picked.
+    el.addEventListener('contextmenu', (event) => {
+      event.preventDefault();
+      this.api.tabs.menu(tab.id, event.clientX, event.clientY, [...this.selected]);
+    });
+
     close.addEventListener('click', (e) => {
       e.stopPropagation();
       this.api.tabs.close(tab.id);
