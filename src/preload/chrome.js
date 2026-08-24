@@ -23,8 +23,7 @@ contextBridge.exposeInMainWorld('cloud', {
     merge: (ids) => ipcRenderer.send('tab:merge', ids),
     split: (id) => ipcRenderer.send('tab:split', id),
     paneSizes: (id, sizes) => ipcRenderer.send('tab:pane-sizes', id, sizes),
-    menu: (id, selected) => ipcRenderer.invoke('tab:menu', id, selected),
-    runMenu: (id, action, selected) => ipcRenderer.send('tab:menu-run', id, action, selected),
+    menu: (id, x, y, selected) => ipcRenderer.send('tab:menu', id, x, y, selected),
     reopen: () => ipcRenderer.send('tab:reopen'),
     setMuted: (id, muted) => ipcRenderer.send('tab:mute', id, muted)
   },

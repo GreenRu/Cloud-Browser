@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy"
+          content="default-src 'none'; style-src 'self' 'unsafe-inline'; script-src 'self';" />
+    <title>Cloud menu</title>
+    <style>
+      /*
+       * A cloud's menu.
+       *
+       * Drawn here rather than by the chrome because the chrome sits under the
+       * page: a menu drawn there is cut off the moment it reaches past the
+       * sidebar, which is most of the time. This is a view of its own, stacked
+       * above the page, so it can be as wide as it likes.
+       *
+       * The body is transparent and padded, so the card's shadow has somewhere
+       * to fall inside the view rather than being clipped at its edge.
+       */
+      :root {
+        --bubble: #ffffff;
+        --text: #22364c;
+        --text-dim: #5f7a96;
+        --hover: rgba(15, 23, 42, 0.06);
+        --line: rgba(15, 23, 42, 0.10);
+        --danger: #d94a4a;
+      }
+
+      [data-theme="night"] {
+        --bubble: #1b2740;
+        --text: #dbe6f6;
+        --text-dim: #8299b9;
+        --hover: rgba(255, 255, 255, 0.08);
+        --line: rgba(255, 255, 255, 0.10);
+        --danger: #ff6b6b;
+      }
+
+      * { box-sizing: border-box; }
+
+      html, body {
+        margin: 0;
+        height: 100%;
+        background: transparent;
+        overflow: hidden;
+        font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+        user-select: none;
+        -webkit-user-select: none;
+        cursor: default;
+      }
+
+      /* The padding is the room the shadow falls into. */
+      body { padding: 14px; }
+
+      .menu {
+        display: inline-block;
+        min-width: 210px;
+        padding: 6px;
+        border-radius: 15px;
+        background: var(--bubble);
+        box-shadow: 0 18px 40px rgba(16, 44, 76, 0.3), 0 2px 8px rgba(16, 44, 76, 0.16);
+        animation: menu-in 150ms cubic-bezier(0.22, 1.6, 0.4, 1) both;
+      }
+
+      @keyframes menu-in {
+        from { opacity: 0; transform: scale(0.94) translateY(-6px); }
+        to { opacity: 1; transform: none; }
+      }
+
+      button {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        width: 100%;
+        padding: 7px 12px;
+        border: 0;
+        border-radius: 10px;
+        background: none;
+        text-align: left;
+        font: inherit;
+        font-size: 12.5px;
+        font-weight: 550;
+        color: var(--text);
+        cursor: pointer;
+        transition: background 120ms ease, color 120ms ease;
+      }
+
+      button span { flex: 1 1 auto; white-space: nowrap; }
+
+      /* The shortcut an item already has, quietly, on the right. */
+      kbd {
+        flex: 0 0 auto;
+        font: inherit;
+        font-size: 11px;
+        color: var(--text-dim);
+      }
+
+      button:hover:not(:disabled),
+      button:focus-visible:not(:disabled) {
+        background: var(--hover);
+        outline: none;
+      }
+
+      button:disabled { opacity: 0.4; cursor: default; }
+
+      button.danger:hover:not(:disabled),
+      button.danger:focus-visible:not(:disabled) {
+        background: rgba(217, 74, 74, 0.16);
+        color: var(--danger);
+      }
+
+      hr {
+        height: 1px;
+        margin: 5px 8px;
+        border: 0;
+        background: var(--line);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="menu" id="menu" role="menu"></div>
+    <script src="./cloud-menu.js"></script>
+  </body>
+</html>

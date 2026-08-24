@@ -52,7 +52,8 @@ window
 ├── the chrome renderer          the sidebar, drawn underneath everything
 ├── the page views               one per pane of the active cloud
 ├── the preview card             the frame around the address bar's preview
-└── the previews                 one per thing that can ask for one
+├── the previews                 one per thing that can ask for one
+└── the cloud menu               over all of it, wherever it is opened
 ```
 
 The consequence catches everyone once: **the chrome cannot draw over a page.**
@@ -64,11 +65,13 @@ open. Two things follow from it:
   invisible the entire time — every measurement correct, nothing on screen.
 - The grip on the seam between merged panes *is* chrome HTML, and works,
   because the seam is the one part of the page area no view covers.
-- The menu on a cloud is drawn by the chrome, which it can be because the strip
-  is chrome too. What is *on* it is decided in the main process, where the state
-  is - which cloud, what is picked, what has been closed - and sent over as a
-  description the renderer turns into buttons. The renderer sends back the name
-  of whatever was chosen, and nothing there is trusted but the name.
+- The menu on a cloud is a view too (`src/pages/cloud-menu.html`). It was chrome
+  HTML first, on the reasoning that the strip is chrome - but a menu opened on a
+  cloud is wider than the sidebar, so its right-hand edge was cut off by the
+  page. What is *on* it is decided in the main process, where the state is -
+  which cloud, what is picked, what has been closed - and sent to that view as a
+  description it turns into buttons. It sends back the name of whatever was
+  chosen, and nothing there is trusted but the name.
 
 Activating a cloud adds its views, which puts them on top, so the card and the
 previews are lifted back afterwards — frame first, previews over it.
@@ -186,7 +189,11 @@ Each of these cost real time to find. [../PLAN.md](../PLAN.md) has the full list
 with the evidence.
 
 - **The chrome cannot draw over a page.** Covered above; it is the single most
-  expensive assumption to get wrong.
+  expensive assumption to get wrong, and it has now been got wrong twice - once
+  for the preview card, once for the cloud menu, whose right-hand edge was cut
+  off at the sidebar. `capturePage` on the renderer will not show it: that
+  captures the renderer alone, so the missing part looks perfectly present.
+  A screen capture is the only thing that tells you.
 - **A filled animation outranks inline styles.** `.tab` carries
   `animation: cloud-in ... both`, and `both` keeps the last keyframe applying
   forever — silently beating every later attempt to set `transform` or `opacity`

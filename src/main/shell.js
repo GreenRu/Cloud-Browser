@@ -105,6 +105,8 @@ class BrowserShell {
     this.previews = new Map();
     this.frameView = null;
     this.frameAttached = false;
+    this.menuView = null;
+    this.menuOpen = null;   // { id, selected, x, y } while one is up
     this.fullScreen = false;
 
     const bounds = fitToScreen(store.get('window') || {});
@@ -164,6 +166,9 @@ class BrowserShell {
         // it. Re-adding a view later to correct the order would steal focus.
         this._ensureBubbleFrame();
         this._ensurePreview(this.window.webContents);
+        // Last, so it is over everything, and now, so its page is loaded long
+        // before anyone right-clicks a cloud.
+        this._ensureCloudMenu();
       }
     });
 
@@ -417,6 +422,7 @@ class BrowserShell {
     }
 
     this.hidePreview();
+    this.hideCloudMenu();
     this.activeId = id;
     for (const view of tab.views) this.window.contentView.addChildView(view);
     // The tab view now sits above both of ours; lift them back, frame first so
@@ -681,6 +687,114 @@ class BrowserShell {
     this.frameView.setVisible(false);
     this.window.contentView.addChildView(this.frameView);
     return this.frameView;
+  }
+
+  /**
+   * The view a cloud's menu is drawn in.
+   *
+   * It has to be a view: the chrome renderer sits *under* the page, so a menu
+   * drawn there is cut off the moment it reaches past the sidebar - which, for
+   * a menu opened on a cloud, is almost always. This is stacked above
+   * everything, so it can be as wide as it likes and land anywhere.
+   */
+  _ensureCloudMenu() {
+    if (this.menuView && !this.menuView.webContents.isDestroyed()) return this.menuView;
+
+    this.menuView = new WebContentsView({
+      webPreferences: {
+        preload: path.join(__dirname, '..', 'preload', 'menu.js'),
+        contextIsolation: true,
+        nodeIntegration: false,
+        sandbox: true
+      }
+    });
+    // Transparent, so the card's rounded corners and its shadow show whatever
+    // is behind them.
+    this.menuView.setBackgroundColor('#00000000');
+
+    const wc = this.menuView.webContents;
+    wc.setWindowOpenHandler(() => ({ action: 'deny' }));
+    wc.on('will-navigate', (event) => event.preventDefault());
+
+    // A menu that has lost the keyboard has been dismissed - by a click on the
+    // page, on the chrome, or on anything else at all.
+    wc.on('blur', () => setTimeout(() => this.hideCloudMenu(), 0));
+
+    // A message sent before the page has loaded is simply dropped, so anything
+    // asked for early waits here.
+    this.menuReady = new Promise((resolve) => {
+      wc.once('did-finish-load', resolve);
+    });
+    wc.loadFile(path.join(__dirname, '..', 'pages', 'cloud-menu.html')).catch(() => {});
+
+    this.menuView.setVisible(false);
+    this.window.contentView.addChildView(this.menuView);
+    return this.menuView;
+  }
+
+  /** Open a cloud's menu at a point in the window. */
+  showCloudMenu(id, x, y, selected = []) {
+    const menu = this.tabMenu(id, selected);
+    if (!menu || this.window.isDestroyed()) return;
+
+    const view = this._ensureCloudMenu();
+    this.menuOpen = { id, selected, x, y };
+
+    // Parked off-screen until it has said how big it is; showing it at a
+    // guessed size would flash a card of the wrong shape.
+    view.setBounds({ x: 0, y: 0, width: 1, height: 1 });
+
+    const payload = { ...menu, base: this.themeState().base };
+    this.menuReady.then(() => {
+      // It may have been dismissed while the page was still loading.
+      if (this.menuOpen && !view.webContents.isDestroyed()) {
+        view.webContents.send('menu:show', payload);
+      }
+    });
+  }
+
+  /**
+   * Called back once the menu has drawn itself and knows its size. Placed at
+   * the pointer, then pulled back inside the window if it would hang off.
+   */
+  placeCloudMenu(width, height) {
+    if (!this.menuOpen || !this.menuView || this.window.isDestroyed()) return;
+
+    const [w, h] = this.window.getContentSize();
+    const { x, y } = this.menuOpen;
+    // The card sits inside its own padding, so the pointer is offset by it.
+    const pad = 14;
+
+    this.menuView.setBounds({
+      x: Math.max(0, Math.min(Math.round(x) - pad, w - width)),
+      y: Math.max(0, Math.min(Math.round(y) - pad, h - height)),
+      width: Math.min(width, w),
+      height: Math.min(height, h)
+    });
+
+    // Above everything, including whatever the active cloud added.
+    this.window.contentView.removeChildView(this.menuView);
+    this.window.contentView.addChildView(this.menuView);
+    this.menuView.setVisible(true);
+    this.menuView.webContents.focus();
+  }
+
+  hideCloudMenu() {
+    this.menuOpen = null;
+    if (!this.menuView || this.menuView.webContents.isDestroyed()) return;
+    if (!this.menuView.getBounds().width) return;
+    this.menuView.setVisible(false);
+    this.menuView.setBounds({ x: 0, y: 0, width: 0, height: 0 });
+    // The keyboard goes back to the page, which is where it was.
+    const tab = this.activeTab;
+    if (tab && !tab.destroyed) tab.webContents.focus();
+  }
+
+  /** Do what was chosen, then put the menu away. */
+  runCloudMenu(action) {
+    const open = this.menuOpen;
+    this.hideCloudMenu();
+    if (open) this.runTabMenu(open.id, action, open.selected);
   }
 
   /** Put the frame away, leaving the view it framed alone. */
@@ -1062,6 +1176,17 @@ class BrowserShell {
 
   destroyPreview() {
     this.hidePreview();
+    if (this.menuView && !this.menuView.webContents.isDestroyed()) {
+      if (!this.window.isDestroyed()) {
+        try {
+          this.window.contentView.removeChildView(this.menuView);
+        } catch {
+          // Already detached.
+        }
+      }
+      this.menuView.webContents.close();
+    }
+    this.menuView = null;
     for (const owner of [...this.previews.keys()]) this._dropPreview(owner);
 
     if (this.frameView && !this.frameView.webContents.isDestroyed()) {

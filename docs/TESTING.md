@@ -92,6 +92,12 @@ invisible behind it — and nothing in the DOM shows this: every measurement is
 correct and a `capturePage` of the renderer looks perfect. Only a screen capture
 tells you.
 
+This has now caught two things. The second was the cloud menu, which is wider
+than the sidebar, so its right-hand edge was under the page. The renderer
+capture showed a complete menu, the DOM measured a complete menu, and 38
+assertions passed. What would have caught it is one line - comparing the menu's
+right edge against where the page view starts - which is now in the suite.
+
 **A suite that builds the shell by hand never boots the app.** They construct
 `BrowserShell` directly, which is what makes them fast, and means none of them
 runs `src/main/index.js`. A missing `let` there passed 28 green assertions and

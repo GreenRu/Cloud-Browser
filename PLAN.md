@@ -118,6 +118,10 @@ Two constraints came out of building it, both worth remembering:
 > frame is correct, and a `capturePage` of the renderer shows it perfectly.
 > A screen capture is the only thing that tells you.
 >
+> It caught the cloud menu the same way later: chrome HTML, wider than the
+> sidebar, right-hand edge under the page, 38 green assertions and a renderer
+> capture that looked perfect. Assert against the page view's own bounds.
+>
 > Anything the chrome needs to show *over* a page has to be its own view. The
 > bubble's card is now one (`src/pages/bubble.html`), stacked between the page
 > and the preview, with the renderer's own copy kept only as the thing that

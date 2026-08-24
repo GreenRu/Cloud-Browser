@@ -119,8 +119,23 @@ function registerIpc() {
   ipcMain.on('tab:pane-sizes', withShell((s, id, sizes) => s.setPaneSizes(id, sizes)));
   ipcMain.on('tab:split', withShell((s, id) => s.splitTab(id)));
   ipcMain.on('tab:merge', withShell((s, ids) => s.mergeTabs(ids)));
-  ipcMain.handle('tab:menu', withShell((s, id, selected) => s.tabMenu(id, selected)));
-  ipcMain.on('tab:menu-run', withShell((s, id, action, selected) => s.runTabMenu(id, action, selected)));
+  ipcMain.on('tab:menu', withShell((s, id, x, y, selected) => s.showCloudMenu(id, x, y, selected)));
+
+  /*
+   * The menu's own view, and only it, may say these things. It is the browser's
+   * own page, but the guard costs nothing and the alternative is a channel any
+   * page could reach.
+   */
+  const fromMenu = (handler) => (event, ...args) => {
+    const s = currentShell();
+    if (!s || !s.menuView || s.menuView.webContents.isDestroyed()) return;
+    if (event.sender !== s.menuView.webContents) return;
+    handler(s, ...args);
+  };
+
+  ipcMain.on('menu:size', fromMenu((s, width, height) => s.placeCloudMenu(width, height)));
+  ipcMain.on('menu:run', fromMenu((s, action) => s.runCloudMenu(action)));
+  ipcMain.on('menu:close', fromMenu((s) => s.hideCloudMenu()));
   ipcMain.on('tab:reopen', withShell((s) => s.reopenClosedTab()));
   ipcMain.on('tab:mute', withShell((s, id, muted) => s.tabs.get(id)?.setMuted(muted)));
 

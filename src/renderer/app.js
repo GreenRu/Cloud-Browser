@@ -50,7 +50,6 @@ const el = {
   stage: $('stage'),
   thought: $('thought'),
   thoughtLabel: $('thought-label'),
-  cloudMenu: $('cloud-menu'),
   paneGrips: $('pane-grips'),
   thoughtBubble: document.querySelector('.thought-bubble'),
   thoughtScreen: $('thought-screen'),
@@ -596,95 +595,6 @@ api.on.fullScreen((on) => {
 
 // Said just before the state that drops them: these clouds are joining that
 // one, so the strip moves them into it rather than closing them.
-// ------------------------------------------------------ a cloud's own menu
-
-/**
- * Draw the menu the browser described, at the pointer.
- *
- * Nothing here decides what is on offer - that is the main process's business,
- * where the state is. This turns a list into buttons, keeps it inside the
- * window, and sends back the name of whatever was chosen.
- */
-let menuFor = null;
-
-async function openCloudMenu(tabId, x, y, selected) {
-  const menu = await api.tabs.menu(tabId, selected).catch(() => null);
-  if (!menu) return;
-
-  menuFor = { tabId, selected };
-  el.cloudMenu.replaceChildren();
-
-  for (const item of menu.items) {
-    if (item.type === 'separator') {
-      el.cloudMenu.appendChild(document.createElement('hr'));
-      continue;
-    }
-
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.setAttribute('role', 'menuitem');
-    button.dataset.action = item.id;
-    button.disabled = item.enabled === false;
-    if (item.danger) button.classList.add('danger');
-
-    const label = document.createElement('span');
-    label.textContent = item.label;
-    button.appendChild(label);
-
-    if (item.accelerator) {
-      const key = document.createElement('kbd');
-      key.textContent = item.accelerator;
-      button.appendChild(key);
-    }
-
-    button.addEventListener('click', () => {
-      const target = menuFor;
-      closeCloudMenu();
-      if (target) api.tabs.runMenu(target.tabId, item.id, target.selected);
-    });
-
-    el.cloudMenu.appendChild(button);
-  }
-
-  // Shown at the pointer, then pulled back inside the window if it would hang
-  // off an edge.
-  el.cloudMenu.hidden = false;
-  const box = el.cloudMenu.getBoundingClientRect();
-  el.cloudMenu.style.left = `${Math.max(8, Math.min(x, window.innerWidth - box.width - 8))}px`;
-  el.cloudMenu.style.top = `${Math.max(8, Math.min(y, window.innerHeight - box.height - 8))}px`;
-
-  const first = el.cloudMenu.querySelector('button:not(:disabled)');
-  if (first) first.focus();
-}
-
-function closeCloudMenu() {
-  if (el.cloudMenu.hidden) return;
-  el.cloudMenu.hidden = true;
-  menuFor = null;
-}
-
-// Anything else the pointer does, and Escape, puts it away.
-window.addEventListener('pointerdown', (event) => {
-  if (!el.cloudMenu.hidden && !el.cloudMenu.contains(event.target)) closeCloudMenu();
-}, true);
-window.addEventListener('blur', closeCloudMenu);
-window.addEventListener('resize', closeCloudMenu);
-document.addEventListener('keydown', (event) => {
-  if (event.key === 'Escape') closeCloudMenu();
-});
-
-// Up and down walk it, the way a menu is expected to.
-el.cloudMenu.addEventListener('keydown', (event) => {
-  if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
-  event.preventDefault();
-  const items = [...el.cloudMenu.querySelectorAll('button:not(:disabled)')];
-  const at = items.indexOf(document.activeElement);
-  const next = event.key === 'ArrowDown' ? at + 1 : at - 1;
-  items[(next + items.length) % items.length]?.focus();
-});
-
-strip.onCloudMenu = openCloudMenu;
-
 // ------------------------------------------------------- buttons from plugins
 
 /**

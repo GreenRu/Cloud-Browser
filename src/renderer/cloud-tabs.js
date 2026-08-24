@@ -197,7 +197,7 @@ class CloudTabStrip {
     // when more than one cloud is picked.
     el.addEventListener('contextmenu', (event) => {
       event.preventDefault();
-      this.onCloudMenu?.(tab.id, event.clientX, event.clientY, [...this.selected]);
+      this.api.tabs.menu(tab.id, event.clientX, event.clientY, [...this.selected]);
     });
 
     close.addEventListener('click', (e) => {
