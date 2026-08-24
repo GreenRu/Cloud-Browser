@@ -1,0 +1,19 @@
+{
+  "id": "quiet-reader",
+  "name": "Quiet Reader",
+  "version": "1.0.0",
+  "description": "Dims fixed banners and cookie bars, and widens articles on demand.",
+  "author": "Stratus",
+  "shortcuts": {
+    "arch": "https://web.archive.org/web/*/%s"
+  },
+  "commands": [
+    { "id": "toggle", "label": "Toggle reading width", "accelerator": "CommandOrControl+Alt+R" }
+  ],
+  "styles": [
+    { "matches": ["<all_urls>"], "css": "quiet.css" }
+  ],
+  "scripts": [
+    { "matches": ["<all_urls>"], "js": "reader.js" }
+  ]
+}

@@ -10,7 +10,47 @@ const { Menu, shell } = require('electron');
  * The bar itself is hidden on Windows/Linux (see BrowserShell), so this is
  * invisible plumbing rather than chrome the user has to look at.
  */
-function buildAppMenu(getShell) {
+/**
+ * The Plugins menu: whatever the installed plugins have declared, grouped by
+ * plugin, with a way to reach the folder either way. Choosing a command tells
+ * that plugin's scripts in the page in front; the browser itself does nothing
+ * else with it.
+ */
+function pluginMenu(plugins, withShell) {
+  const items = [];
+  const commands = plugins ? plugins.commands() : [];
+
+  let lastPlugin = null;
+  for (const command of commands) {
+    if (command.plugin !== lastPlugin) {
+      if (lastPlugin !== null) items.push({ type: 'separator' });
+      items.push({ label: command.pluginName, enabled: false });
+      lastPlugin = command.plugin;
+    }
+    items.push({
+      label: command.label,
+      accelerator: command.accelerator || undefined,
+      click: withShell((s) => s.runPluginCommand(command.plugin, command.id))
+    });
+  }
+
+  if (!items.length) {
+    const count = plugins ? plugins.plugins.size : 0;
+    items.push({
+      label: count ? 'No plugin commands' : 'No plugins installed',
+      enabled: false
+    });
+  }
+
+  items.push(
+    { type: 'separator' },
+    { label: 'Manage Plugins...', click: withShell((s) => s.newTab('stratus://settings')) }
+  );
+
+  return items;
+}
+
+function buildAppMenu(getShell, plugins = null) {
   const withShell = (fn) => () => {
     const s = getShell();
     if (s && !s.window.isDestroyed()) fn(s);
@@ -183,6 +223,10 @@ function buildAppMenu(getShell) {
       ]
     },
     {
+      label: 'Plugins',
+      submenu: pluginMenu(plugins, withShell)
+    },
+    {
       label: 'Help',
       submenu: [
         {
@@ -225,7 +269,7 @@ function popupToolsMenu(shellRef, x, y) {
     { label: 'Print…', enabled: Boolean(tab), click: () => tab?.webContents.print() },
     { type: 'separator' },
     {
-      label: shellRef.store.get('theme') === 'night' ? 'Switch to day' : 'Switch to night',
+      label: shellRef.store.get('theme') === 'night' ? 'Day theme' : 'Night theme',
       click: () => shellRef.setTheme(shellRef.store.get('theme') === 'night' ? 'day' : 'night')
     },
     { label: 'Developer tools', accelerator: 'Ctrl+Shift+I', click: () => tab?.webContents.toggleDevTools() }

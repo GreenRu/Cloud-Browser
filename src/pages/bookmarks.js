@@ -67,7 +67,7 @@ filterInput.addEventListener('input', render);
 async function load() {
   if (!bridge) return;
   const state = await bridge.getState();
-  document.documentElement.dataset.theme = state.theme || 'day';
+  window.SkyTheme.apply({ base: state.themeBase, variables: state.pageThemeVars });
   bookmarks = state.bookmarks || [];
   render();
 }
@@ -76,5 +76,5 @@ load();
 
 // Follow the browser theme while the page is open, not just at load.
 bridge?.onTheme?.((theme) => {
-  document.documentElement.dataset.theme = theme;
+  window.SkyTheme.apply(theme);
 });

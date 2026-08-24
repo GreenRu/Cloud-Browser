@@ -1,0 +1,339 @@
+{
+  "id": "own-theme",
+  "name": "Make Your Own Theme",
+  "version": "1.0.0",
+  "description": "Adds a Custom theme you can set every colour of yourself.",
+  "author": "Stratus",
+  "themes": [
+    {
+      "id": "custom",
+      "name": "Custom",
+      "dark": "@dark-sites",
+      "variables": {
+        "--sky-top": "@sky-top",
+        "--sky-bottom": "@sky-bottom",
+        "--text-on-sky": "@text-on-sky",
+        "--new-cloud-line": "@new-cloud-line 0.6",
+        "--scroll-thumb": "@scroll-thumb 0.55",
+        "--cloud": "@cloud",
+        "--cloud-idle": "@cloud-idle",
+        "--cloud-hover": "@cloud-hover",
+        "--cloud-bright": "@cloud-bright",
+        "--close-veil": "@close-veil 0.62",
+        "--text": "@text",
+        "--text-dim": "@text-dim",
+        "--accent": "@accent",
+        "--danger": "@danger",
+        "--field": "@field",
+        "--field-line": "@field-line 0.1",
+        "--hover": "@hover 0.5",
+        "--panel": "@panel 0.74",
+        "--panel-line": "@panel-line 0.55",
+        "--bubble": "@bubble",
+        "--stage": "@stage",
+        "--rain": "@rain",
+        "--rain-drop": "@rain-drop 0.85",
+        "--pool-deep": "@pool-deep 0.26",
+        "--pool-shallow": "@pool-shallow 0.5",
+        "--pool-rim": "@pool-rim 0.72",
+        "--pool-glow": "@pool-glow 0.55",
+        "--pool-sheen": "@pool-sheen 0.85"
+      },
+      "pageVariables": {
+        "--sky-top": "@page-sky-top",
+        "--sky-bottom": "@page-sky-bottom",
+        "--text": "@page-text",
+        "--text-dim": "@page-text-dim",
+        "--accent": "@page-accent",
+        "--field": "@page-field",
+        "--card": "@page-card 0.9",
+        "--card-solid": "@page-card-solid",
+        "--card-hover": "@page-card-hover",
+        "--card-line": "@page-card-line 0.08",
+        "--drift-far": "@page-drift-far"
+      },
+      "fields": [
+        {
+          "id": "sky-top",
+          "label": "Sky, top",
+          "group": "The sky",
+          "type": "color",
+          "default": "#74b1e5"
+        },
+        {
+          "id": "sky-bottom",
+          "label": "Sky, bottom",
+          "group": "The sky",
+          "type": "color",
+          "default": "#b6dbf6"
+        },
+        {
+          "id": "text-on-sky",
+          "label": "Text on the sky",
+          "group": "The sky",
+          "type": "color",
+          "default": "#24425f"
+        },
+        {
+          "id": "new-cloud-line",
+          "label": "New cloud outline",
+          "group": "The sky",
+          "type": "color",
+          "default": "#ffffff"
+        },
+        {
+          "id": "scroll-thumb",
+          "label": "Scrollbar",
+          "group": "The sky",
+          "type": "color",
+          "default": "#ffffff"
+        },
+        {
+          "id": "cloud",
+          "label": "Cloud",
+          "group": "Clouds",
+          "type": "color",
+          "default": "#ffffff"
+        },
+        {
+          "id": "cloud-idle",
+          "label": "Cloud, resting",
+          "group": "Clouds",
+          "type": "color",
+          "default": "#dcecfb"
+        },
+        {
+          "id": "cloud-hover",
+          "label": "Cloud, pointed at",
+          "group": "Clouds",
+          "type": "color",
+          "default": "#eef6fe"
+        },
+        {
+          "id": "cloud-bright",
+          "label": "Cloud, the one you are on",
+          "group": "Clouds",
+          "type": "color",
+          "default": "#ffffff"
+        },
+        {
+          "id": "close-veil",
+          "label": "Close button veil",
+          "group": "Clouds",
+          "type": "color",
+          "default": "#1c304a"
+        },
+        {
+          "id": "text",
+          "label": "Text",
+          "group": "Text and controls",
+          "type": "color",
+          "default": "#22364c"
+        },
+        {
+          "id": "text-dim",
+          "label": "Text, quieter",
+          "group": "Text and controls",
+          "type": "color",
+          "default": "#5f7a96"
+        },
+        {
+          "id": "accent",
+          "label": "Accent",
+          "group": "Text and controls",
+          "type": "color",
+          "default": "#2472cf"
+        },
+        {
+          "id": "danger",
+          "label": "Danger",
+          "group": "Text and controls",
+          "type": "color",
+          "default": "#d94a4a"
+        },
+        {
+          "id": "field",
+          "label": "Address bar",
+          "group": "Text and controls",
+          "type": "color",
+          "default": "#ffffff"
+        },
+        {
+          "id": "field-line",
+          "label": "Address bar edge",
+          "group": "Text and controls",
+          "type": "color",
+          "default": "#0f172a"
+        },
+        {
+          "id": "hover",
+          "label": "Hover wash",
+          "group": "Text and controls",
+          "type": "color",
+          "default": "#ffffff"
+        },
+        {
+          "id": "panel",
+          "label": "Panel",
+          "group": "Text and controls",
+          "type": "color",
+          "default": "#ffffff"
+        },
+        {
+          "id": "panel-line",
+          "label": "Panel edge",
+          "group": "Text and controls",
+          "type": "color",
+          "default": "#ffffff"
+        },
+        {
+          "id": "bubble",
+          "label": "Preview bubble",
+          "group": "Text and controls",
+          "type": "color",
+          "default": "#ffffff"
+        },
+        {
+          "id": "stage",
+          "label": "Page area",
+          "group": "Text and controls",
+          "type": "color",
+          "default": "#eaf3fc"
+        },
+        {
+          "id": "rain",
+          "label": "Rain cloud mark",
+          "group": "Rain",
+          "type": "color",
+          "default": "#8fa3ba"
+        },
+        {
+          "id": "rain-drop",
+          "label": "Raindrop",
+          "group": "Rain",
+          "type": "color",
+          "default": "#ffffff"
+        },
+        {
+          "id": "pool-deep",
+          "label": "Puddle, deep",
+          "group": "Rain",
+          "type": "color",
+          "default": "#ffffff"
+        },
+        {
+          "id": "pool-shallow",
+          "label": "Puddle, shallow",
+          "group": "Rain",
+          "type": "color",
+          "default": "#ffffff"
+        },
+        {
+          "id": "pool-rim",
+          "label": "Puddle rim",
+          "group": "Rain",
+          "type": "color",
+          "default": "#ffffff"
+        },
+        {
+          "id": "pool-glow",
+          "label": "Puddle glow",
+          "group": "Rain",
+          "type": "color",
+          "default": "#ffffff"
+        },
+        {
+          "id": "pool-sheen",
+          "label": "Puddle sheen",
+          "group": "Rain",
+          "type": "color",
+          "default": "#ffffff"
+        },
+        {
+          "id": "page-sky-top",
+          "label": "Page sky, top",
+          "group": "The browser's pages",
+          "type": "color",
+          "default": "#f6faff"
+        },
+        {
+          "id": "page-sky-bottom",
+          "label": "Page sky, bottom",
+          "group": "The browser's pages",
+          "type": "color",
+          "default": "#e4f0fb"
+        },
+        {
+          "id": "page-text",
+          "label": "Page text",
+          "group": "The browser's pages",
+          "type": "color",
+          "default": "#21364d"
+        },
+        {
+          "id": "page-text-dim",
+          "label": "Page text, quieter",
+          "group": "The browser's pages",
+          "type": "color",
+          "default": "#5f7791"
+        },
+        {
+          "id": "page-accent",
+          "label": "Page accent",
+          "group": "The browser's pages",
+          "type": "color",
+          "default": "#2b7fe0"
+        },
+        {
+          "id": "page-field",
+          "label": "Page input",
+          "group": "The browser's pages",
+          "type": "color",
+          "default": "#ffffff"
+        },
+        {
+          "id": "page-card",
+          "label": "Card",
+          "group": "The browser's pages",
+          "type": "color",
+          "default": "#ffffff"
+        },
+        {
+          "id": "page-card-solid",
+          "label": "Card, solid",
+          "group": "The browser's pages",
+          "type": "color",
+          "default": "#ffffff"
+        },
+        {
+          "id": "page-card-hover",
+          "label": "Card, pointed at",
+          "group": "The browser's pages",
+          "type": "color",
+          "default": "#f2f8ff"
+        },
+        {
+          "id": "page-card-line",
+          "label": "Card edge",
+          "group": "The browser's pages",
+          "type": "color",
+          "default": "#0f172a"
+        },
+        {
+          "id": "page-drift-far",
+          "label": "Distant cloud",
+          "group": "The browser's pages",
+          "type": "color",
+          "default": "#a8c9e6"
+        },
+        {
+          "id": "dark-sites",
+          "label": "Ask websites for their dark theme",
+          "group": "Websites",
+          "type": "toggle",
+          "default": false
+        }
+      ]
+    }
+  ]
+}

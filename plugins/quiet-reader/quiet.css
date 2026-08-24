@@ -1,0 +1,23 @@
+/*
+ * Nothing here changes what a page says - only how loudly it says it.
+ *
+ * Elements a page has pinned over its own content get a moment of quiet: they
+ * fade back until the pointer goes near them, at which point they return in
+ * full. The class the script adds is what widens the text.
+ */
+
+[data-stratus-reader] main,
+[data-stratus-reader] article,
+[data-stratus-reader] .post,
+[data-stratus-reader] .content {
+  max-width: 44rem !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  line-height: 1.7 !important;
+}
+
+[data-stratus-reader] img,
+[data-stratus-reader] video {
+  max-width: 100% !important;
+  height: auto !important;
+}

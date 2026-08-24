@@ -14,36 +14,98 @@ npm start
 > would be unreadable ciphertext — and stored `cloud://` addresses are rewritten
 > to `stratus://`.
 
+## Documentation
+
+| Document | What is in it |
+| --- | --- |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How the processes, views and IPC fit together, and why the page is positioned the way it is |
+| [docs/PRIVACY.md](docs/PRIVACY.md) | What is stored, where, and what never leaves the machine |
+| [docs/PLUGINS.md](docs/PLUGINS.md) | Writing a plugin, with the full manifest reference |
+| [docs/TESTING.md](docs/TESTING.md) | How the assertion suites work and how to run them |
+| [PLAN.md](PLAN.md) | The working notes: what each check costs, and every trap found the hard way |
+
 ## What it does
+
+### Browsing
 
 - **Real browsing** on Chromium via `WebContentsView` — one view per tab, all
   owned by the main process.
 - **Vertical cloud tabs**: open, close, activate, drag to reorder, middle-click
   to close, per-tab mute, live favicons and loading spinners. Each cloud is a
-  rounded body with long overlapping lobes, shaped from a hash of the tab id —
-  so tabs look individual but never re-shuffle while you use them.
+  rounded body with overlapping lobes, shaped from a hash of the tab id — so
+  tabs look individual but never re-shuffle while you use them.
+- **Merge and split.** Ctrl-click two or more clouds and merge them: they become
+  one cloud showing several pages side by side. The seam between panes is
+  draggable like a window splitter, and splitting them apart gives each its own
+  cloud back with its page intact.
 - **No top chrome.** Address bar, navigation and menus all live in the sidebar,
   which resizes by dragging its edge and collapses to icons on a double-click.
+- **Full screen** hands the whole window to the pages: no furniture, no seam
+  between merged panes, no rounded corners.
+- **Navigation**: back, forward, reload, stop, home, zoom, find-in-page with
+  match counts, print.
+
+### The address bar, and its bubble
+
 - **Omnibox** that tells a URL from a search query, with a connection badge
   (secure / not secure / internal page) and a bookmark star.
+- **A live preview** hangs off it as you type: a real view of wherever Enter
+  would take you, in a card that names the destination. Press it and it grows
+  into the page.
+- **The new tab page has its own search bar**, with the same live bubble. Each
+  pane of a merged cloud gets its own — three panes can be searched at once,
+  and opening one fills that pane rather than the window.
 - **Search shortcuts**: `gt bonjour` opens Google Translate, `yt lofi` searches
   YouTube. Eleven ship by default (`g gt yt gh w mdn so npm ddg maps img`) and
   you can add your own in Settings, where `%s` marks the query.
-- **Saved passwords**, encrypted with the OS keystore — see below.
-- **Settings page** at `stratus://settings` (`Ctrl+,`) for the search engine,
-  home page, theme, address-bar display, shortcuts, saved logins and clearing
-  history.
-- **Trimmed addresses** (optional): the bar can show just the site —
-  `news.ycombinator.com` — and reveal the whole address when you click it.
-- **Navigation**: back, forward, reload, stop, home, zoom, find-in-page with
-  match counts, print.
-- **Bookmarks and history**, persisted to disk, each with its own built-in page.
+
+### The browser's own pages
+
+- **New tab** — a sky of shortcut clouds you can add to and remove, with a
+  search bar of its own.
+- **History** at `stratus://history` (`Ctrl+H`) — grouped by day with per-day
+  counts, filtered by text and by time range, with favicons, forget-one-page and
+  clear-a-whole-day.
+- **Bookmarks** at `stratus://bookmarks` (`Ctrl+Shift+O`).
+- **Settings** at `stratus://settings` (`Ctrl+,`) — search engine, home page,
+  reopening the last session, page zoom, address-bar display, theme, saved
+  logins, plugins, and browsing data.
+- **Error page** for failed loads, with a retry button.
+
+### Weather
+
 - **Day and night themes**, applied to the chrome, the native titlebar overlay
-  and the built-in pages together.
-- **Session restore**: the tabs you had open come back on next launch, as does
-  the window position, size and sidebar width.
-- Downloads report progress and offer *Show in folder*; failed loads land on a
-  themed error page with a retry button.
+  and the browser's own pages together, and to websites through
+  `prefers-color-scheme`.
+- **Stars at night, birds by day**, on the browser's own pages. The hidden one
+  is fully paused, so it costs nothing.
+- **Closing a cloud** takes it out of the strip, floats it down below the
+  new-cloud button and rains it out there, gathering a puddle along the foot of
+  the sky if there is room for one.
+- **Merging** slides the joined clouds up into the one they joined rather than
+  raining them out.
+
+### Kept for you
+
+- **Saved passwords**, encrypted with the OS keystore — see
+  [docs/PRIVACY.md](docs/PRIVACY.md).
+- **Bookmarks and history**, persisted to disk.
+- **Session restore** (optional): the clouds you had open come back next launch,
+  as does the window position, size and sidebar width.
+- Downloads report progress and offer *Show in folder*.
+
+### Plugins
+
+Three ship with the browser and **all of them start switched off** — nothing
+runs until you ask for it, in **Settings → Plugins**.
+
+| Plugin | What it adds |
+| --- | --- |
+| **Make Your Own Theme** | A *Custom* entry in the theme list with every one of the interface's 39 colours editable, and a switch for whether websites are asked for their dark theme |
+| **Page Timeline** | A button between back and forward, opening a branching map of where each cloud has been — including the paths you turned back from, which the browser's own history throws away |
+| **Quiet Reader** | A reading width you can toggle, and an `arch` keyword for the Internet Archive |
+
+Writing your own is [docs/PLUGINS.md](docs/PLUGINS.md).
 
 ## Keyboard
 
@@ -63,67 +125,40 @@ npm start
 | `Ctrl+Shift+I`, `F12` | Developer tools for the page |
 
 Shortcuts are registered on the (hidden) application menu rather than as
-renderer key handlers, so they still fire while a web page has focus.
+renderer key handlers, so they still fire while a web page has focus. Plugins
+can add their own — the bundled Quiet Reader takes `Ctrl+Alt+R`.
 
 ## Layout
 
 ```
 src/
-  main/        Electron main process
-    index.js     app lifecycle, IPC surface, session + download handling
-    shell.js     the window: tab set, layout, context menus, state broadcast
-    tab.js       one tab = one WebContentsView + its presentation state
-    menu.js      application menu (the keyboard map) and the toolbar menu
-    store.js     JSON preferences, bookmarks, history in the user-data dir
-    urls.js      URL vs. search parsing, shortcuts, stratus:// page routing
-    passwords.js the encrypted login vault
+  main/          Electron main process
+    index.js       app lifecycle, IPC surface, session + download handling
+    shell.js       the window: tab set, layout, previews, context menus, state
+    tab.js         one tab = one WebContentsView, its state and its trail
+    menu.js        application menu (the keyboard map) and the toolbar menu
+    store.js       JSON preferences, bookmarks, history in the user-data dir
+    urls.js        URL vs. search parsing, shortcuts, stratus:// routing
+    passwords.js   the encrypted login vault
+    plugins.js     the plugin host: manifests, injection, themes, toolbar
+    sky.js         the shortcut clouds on the new tab page
   preload/
-    chrome.js    context bridge for the browser UI
-    page.js      minimal bridge, installed only for the built-in pages
-  renderer/      the browser UI (sidebar, drawers, page card)
-    cloud-tabs.js  cloud tab rendering and drag-to-reorder
-  pages/         new tab, history, bookmarks, settings and error pages
+    chrome.js      context bridge for the browser UI
+    page.js        bridges for the browser's own pages and for plugin pages
+    preview.js     the address bar preview: swallows interaction, forwards a press
+    bubble.js      the card drawn around that preview
+  renderer/        the browser UI (sidebar, drawers, page card)
+    cloud-tabs.js    cloud rendering, drag-to-reorder, closing and merging
+  pages/           new tab, history, bookmarks, settings, error, preview card
+  shared/          loaded by both the UI and the browser's own pages
+    clouds.js        the cloud silhouette generator
+    theme.js         applying a theme, built-in or from a plugin
+    stars.js         the night sky
+    birds.js         the day sky
+plugins/         bundled plugins, all switched off until asked for
+docs/            the documents listed above
+tools/           Windows registration, shortcut and icon scripts
 ```
-
-The renderer never touches browsing state directly. It receives `shell:state`
-snapshots and sends intents back over a small, explicitly enumerated IPC
-surface; `nodeIntegration` is off and `contextIsolation` on everywhere, and web
-pages run sandboxed in their own persistent session partition.
-
-### How the page gets positioned
-
-A `WebContentsView` is a native child of the window, not part of the UI
-document, so it has to be positioned manually. The renderer keeps an empty
-`.stage` element exactly where the page belongs and reports its rect as insets
-from the window edges; the main process turns those back into bounds. Opening
-the find bar or resizing the sidebar therefore moves the page automatically,
-with no hard-coded chrome height anywhere.
-
-## How saved passwords work
-
-Secrets are encrypted with Electron's `safeStorage`, which delegates to the OS
-keystore — DPAPI on Windows, Keychain on macOS, libsecret or kwallet on Linux.
-Only ciphertext reaches `logins.json`, and the key is bound to both the OS user
-and this profile's `Local State`, so copying the file elsewhere yields nothing.
-If a platform reports no keystore, saving is refused rather than falling back to
-plaintext: a password store that quietly isn't one is worse than none.
-
-A few rules keep credentials where they belong:
-
-- **The page never says which origin it is.** The renderer sends only the
-  submitted values; the main process reads the origin from the sending tab's
-  own URL. A compromised page cannot ask for another site's credentials.
-- **Origins must match exactly** — scheme, host and port. `https://example.com`
-  will not fill on `http://example.com` or on `sub.example.com`.
-- **Top frame only.** A cross-origin iframe is never filled.
-- **Nothing is filled when several accounts are stored** for one origin, until
-  there is a picker to choose with.
-- **Nothing is exposed to page JavaScript.** The capture-and-fill half of
-  `src/preload/page.js` makes no `contextBridge` call at all; it only listens to
-  DOM events inside the isolated world.
-
-Sites can be declined permanently ("Never"), and every saved login can be
-revealed — auto-hiding after 15 seconds — or deleted in Settings.
 
 ## Building
 
@@ -137,9 +172,6 @@ revealed — auto-hiding after 15 seconds — or deleted in Settings.
 The script checks the toolchain, installs dependencies if they are missing,
 parses every source file before it packages anything, and reports where the
 build landed. `npm run package` does the same thing without the checks.
-
-Output goes to `dist/`. The `CloudBrowser-win32-x64/` folder at the repo root
-is a stale build of the previous version and can be deleted.
 
 ### Windows 11: the packaged build will not start
 
@@ -155,15 +187,19 @@ For running it on your own machine, skip packaging and make a shortcut:
 npm run shortcut
 ```
 
-That puts a *Stratus* shortcut on the desktop which launches the app
-through `node_modules/electron/dist/electron.exe` — an unsigned binary too, but
-one whose hash is on millions of machines, so it has reputation and runs. No
+That puts a *Stratus* shortcut on the desktop which launches the app through
+`node_modules/electron/dist/electron.exe` — an unsigned binary too, but one
+whose hash is on millions of machines, so it has reputation and runs. No
 security setting is weakened, and deleting the shortcut undoes it.
+
+Smart App Control can also start blocking that Electron binary mid-session. The
+verdict is pinned to the file rather than its contents — copying the same bytes
+elsewhere runs — so `npm rebuild electron` clears it. Turning Smart App Control
+off is the wrong fix: it cannot be turned back on without reinstalling Windows.
 
 Shipping to other people needs a real code signing certificate. The free route
 is the [SignPath Foundation](https://signpath.org/apply), which requires an
-OSI-licensed, already-released, actively maintained public project — worth
-applying for once this is on GitHub with releases.
+OSI-licensed, already-released, actively maintained public project.
 
 ## The icon
 
@@ -171,10 +207,11 @@ applying for once this is on GitHub with releases.
 npm run icon
 ```
 
-`assets/icon.ico` is generated, not hand-drawn: [tools/make-icon.ps1](tools/make-icon.ps1)
-renders the logo's own geometry at nine sizes from 16px to 256px and packs them
-into one file. Drawing each size rather than downsampling one bitmap is what
-keeps the 16px version legible in a taskbar.
+`assets/icon.ico` is generated, not hand-drawn:
+[tools/make-icon.ps1](tools/make-icon.ps1) renders the logo's own geometry at
+nine sizes from 16px to 256px and packs them into one file. Drawing each size
+rather than downsampling one bitmap is what keeps the 16px version legible in a
+taskbar.
 
 ## Opening files, and being the default browser
 
@@ -191,18 +228,17 @@ under `HKEY_CURRENT_USER`, so it needs no administrator rights and touches no
 other account.
 
 The layout matters more than it looks. A registration under
-`Software\<App>\Capabilities` makes Windows treat the program as *an app*; to
-be offered as a *browser* it has to live under
+`Software\<App>\Capabilities` makes Windows treat the program as *an app*; to be
+offered as a *browser* it has to live under
 `Software\Clients\StartMenuInternet\<name>` with a
 `Capabilities\StartMenu\StartMenuInternet` value pointing back at itself. That
-is how Edge and Firefox are registered, and the script mirrors their shape
-key for key.
+is how Edge and Firefox are registered, and the script mirrors their shape key
+for key.
 
 That alone still is not enough. The Default apps page lists *installed*
 applications, so the script also creates a Start menu shortcut and an entry
 under Installed apps — the two things that make Windows consider a program
-installed at all. Every browser on this machine has both; a registry-only
-registration is invisible to that page.
+installed at all.
 
 Two smaller details matter as much:
 
@@ -211,38 +247,25 @@ Two smaller details matter as much:
 - The name shown in *Open with* comes from the **executable's version
   resource**, not from anything registered — so the development launcher would
   appear as "Electron". `FriendlyAppName` on the application key overrides it.
-  A packaged build carries the right name itself.
 
 Twenty-two file types are claimed, all of them things Chromium can genuinely
 display: `.html`, `.svg`, `.pdf`, `.txt`, `.json`, `.xml` and the common image
 formats. Word documents are deliberately not among them — Chromium cannot
-render `.doc` or `.docx`, which is why Edge hands those to Office rather than
-opening them itself.
-
-Smart App Control is not an obstacle here. It blocks a freshly *packaged*
-build, but the registration points at the same Electron binary the shortcut
-uses, which has reputation and runs — verified by opening a file through the
-registered handler with no Code Integrity block logged.
-
-## Plugins
-
-`plugins/` is reserved for the plugin system and is not loaded yet; see
-[plugins/README.md](plugins/README.md) for the intended manifest shape and the
-hook points that already exist.
+render `.doc` or `.docx`, which is why Edge hands those to Office instead.
 
 ## Not built yet
 
-Multiple windows, tab groups, the plugin host, download manager UI, a
-permission prompt (non-essential permissions are currently denied), omnibox
-autocomplete, and an account picker for sites with several saved logins. The plumbing is in place for each: `shells` is already an array,
-`Store` takes arbitrary keys, and permissions are gated in one place in
-`src/main/index.js`.
+Multiple windows, tab groups, a download manager UI, a permission prompt
+(non-essential permissions are currently denied), omnibox autocomplete, and an
+account picker for sites with several saved logins. The plumbing is in place for
+each: `shells` is already an array, `Store` takes arbitrary keys, and
+permissions are gated in one place in `src/main/index.js`.
 
 ## License
 
 Stratus is free software under the [GNU General Public License v3](LICENSE) or
-later. It comes with no warranty. Anything you build on it and distribute has
-to carry the same freedoms - including the source.
+later. It comes with no warranty. Anything you build on it and distribute has to
+carry the same freedoms — including the source.
 
 Electron and Chromium ship under their own licences (MIT and BSD-style), which
 GPL-3 permits.

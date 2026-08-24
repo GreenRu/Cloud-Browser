@@ -17,11 +17,11 @@
          Still lighter than the chrome's sky, so the page card's edge reads. */
       body {
         overflow: hidden;
-        background: linear-gradient(180deg, #c2dff7 0%, #d9ecfb 48%, #eef6fd 100%);
+        background: linear-gradient(180deg, #dceefc 0%, #eaf5fd 52%, #f6fbff 100%);
       }
 
       [data-theme="night"] body {
-        background: linear-gradient(180deg, #16233a 0%, #101a2c 55%, #0b1220 100%);
+        background: linear-gradient(180deg, #1b2a45 0%, #142033 55%, #0f1928 100%);
       }
 
       .sky-page {
@@ -131,27 +131,182 @@
       /* A site whose icon would not load gets the browser's raining cloud. */
       .drift-icon.is-rain svg { color: #93a6bb; }
 
+      /* The one cloud that is always there. Quieter than a shortcut - it is a
+         way in, not a destination. */
+      .drift.is-add { color: var(--text-dim); }
+      .drift.is-add .drift-icon svg { width: 20px; height: 20px; color: currentColor; }
+      .drift.is-add:hover { color: var(--text); }
+
+      /* ---------- right-click a cloud ---------- */
+
+      .sky-menu {
+        position: fixed;
+        z-index: 40;
+        min-width: 168px;
+        padding: 5px;
+        border-radius: 13px;
+        background: var(--card-solid);
+        box-shadow: 0 14px 34px rgba(20, 45, 75, 0.26), 0 2px 6px rgba(20, 45, 75, 0.14);
+        animation: menu-in 140ms cubic-bezier(0.22, 1.5, 0.4, 1) both;
+      }
+
+      .sky-menu[hidden] { display: none; }
+
+      @keyframes menu-in {
+        from { opacity: 0; transform: scale(0.94) translateY(-4px); }
+        to { opacity: 1; transform: none; }
+      }
+
+      .sky-menu button {
+        display: block;
+        width: 100%;
+        padding: 8px 12px;
+        border-radius: 9px;
+        text-align: left;
+        font-size: 13px;
+        font-weight: 550;
+        color: var(--text);
+        transition: background 120ms ease, color 120ms ease;
+      }
+
+      .sky-menu button:hover { background: var(--card-hover); }
+      .sky-menu button.is-remove:hover { background: rgba(214, 84, 84, 0.16); color: #d65454; }
+
+      /* ---------- adding one ---------- */
+
+      .sky-sheet {
+        position: fixed;
+        inset: 0;
+        z-index: 50;
+        display: grid;
+        place-items: center;
+        background: rgba(14, 32, 54, 0.32);
+        animation: sheet-in 160ms ease both;
+      }
+
+      .sky-sheet[hidden] { display: none; }
+
+      @keyframes sheet-in { from { opacity: 0; } to { opacity: 1; } }
+
+      .sky-sheet form {
+        width: min(370px, calc(100vw - 48px));
+        padding: 22px;
+        border-radius: 22px;
+        background: var(--card-solid);
+        box-shadow: 0 24px 60px rgba(14, 32, 54, 0.38);
+        animation: menu-in 220ms cubic-bezier(0.22, 1.5, 0.4, 1) both;
+      }
+
+      .sky-sheet h2 {
+        margin: 0 0 14px;
+        font-family: var(--brand-font);
+        font-size: 17px;
+        font-weight: 700;
+        color: var(--text);
+      }
+
+      .sky-sheet label {
+        display: block;
+        margin-bottom: 11px;
+        font-size: 11.5px;
+        font-weight: 650;
+        letter-spacing: 0.3px;
+        text-transform: uppercase;
+        color: var(--text-dim);
+      }
+
+      .sky-sheet input {
+        display: block;
+        width: 100%;
+        margin-top: 5px;
+        height: 38px;
+        padding: 0 13px;
+        border: 1.5px solid var(--card-hover);
+        border-radius: 11px;
+        background: none;
+        color: var(--text);
+        font: inherit;
+        font-size: 14px;
+        text-transform: none;
+        letter-spacing: 0;
+        outline: none;
+        transition: border-color 140ms ease;
+      }
+
+      .sky-sheet input:focus { border-color: var(--accent); }
+
+      .sheet-row {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-top: 18px;
+      }
+
+      .sheet-row button {
+        height: 34px;
+        padding: 0 16px;
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 650;
+        color: var(--text-dim);
+        transition: background 140ms ease, color 140ms ease, transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
+      }
+
+      .sheet-row button:hover { background: var(--card-hover); color: var(--text); }
+
+      .sheet-row button[type="submit"] {
+        background: var(--accent);
+        color: #fff;
+      }
+
+      .sheet-row button[type="submit"]:hover { transform: translateY(-1px); filter: brightness(1.06); }
+
       /* ---------- the ground: search, with its own bubble above ---------- */
 
       .ground { flex: 0 0 auto; position: relative; }
 
+      /* The bubble is only a frame. Its interior is reported to the browser,
+         which parks a real view of the destination over that rect - so what
+         you see above the search bar is the page itself, not a description of
+         it. Same trick as the address bar's bubble. */
       .ask-bubble {
         position: absolute;
         left: 50%;
         bottom: calc(100% + 34px);
         transform: translateX(-50%);
-        max-width: 100%;
-        padding: 12px 20px;
+        width: min(520px, calc(100vw - 72px));
+        padding: 4px 12px 12px;
         border-radius: 22px;
         background: var(--card-solid);
         box-shadow: 0 12px 28px rgba(20, 45, 75, 0.22), 0 3px 7px rgba(20, 45, 75, 0.12);
+        animation: bubble-in 320ms cubic-bezier(0.22, 1.7, 0.36, 1) both;
+      }
+
+      .ask-head {
         display: flex;
         align-items: center;
         gap: 10px;
-        font-size: 13.5px;
+        padding: 7px 8px 9px;
+        font-size: 13px;
         font-weight: 600;
         color: var(--text);
-        animation: bubble-in 320ms cubic-bezier(0.22, 1.7, 0.36, 1) both;
+      }
+
+      .ask-hint {
+        flex: 0 0 auto;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.2px;
+        color: var(--text-dim);
+      }
+
+      /* Held open at the size the view will fill. The radius matches the one
+         the browser rounds that view to. */
+      .ask-screen {
+        height: 250px;
+        border-radius: 15px;
+        background: var(--card-hover);
+        overflow: hidden;
       }
 
       .ask-bubble[hidden] { display: none; }
@@ -161,11 +316,12 @@
         to { opacity: 1; transform: translateX(-50%); }
       }
 
-      .ask-bubble span {
+      .ask-head #ask-target {
+        flex: 1 1 auto;
+        min-width: 0;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
-        max-width: 460px;
       }
 
       .ask-arrow { width: 16px; height: 16px; flex: 0 0 auto; color: var(--accent); }
@@ -286,16 +442,46 @@
 
       <section class="sky-field" id="sky-field"></section>
 
+      <!-- Right-clicking a cloud. Drawn by the page rather than the browser:
+           these are the page's own objects, and nothing else knows about them. -->
+      <div class="sky-menu" id="sky-menu" hidden role="menu">
+        <button type="button" id="menu-open" role="menuitem">Open in a new cloud</button>
+        <button type="button" id="menu-remove" class="is-remove" role="menuitem">Remove from the sky</button>
+      </div>
+
+      <div class="sky-sheet" id="sky-sheet" hidden>
+        <form id="sky-add-form">
+          <h2>Add a cloud</h2>
+          <label>
+            Address
+            <input type="text" id="add-url" placeholder="example.com" autocomplete="off" spellcheck="false" />
+          </label>
+          <label>
+            Name <span style="text-transform: none; font-weight: 500;">(optional)</span>
+            <input type="text" id="add-label" placeholder="Taken from the address" autocomplete="off" />
+          </label>
+          <div class="sheet-row">
+            <button type="button" id="add-cancel">Cancel</button>
+            <button type="submit">Add</button>
+          </div>
+        </form>
+      </div>
+
       <footer class="ground">
         <span class="ask-puff ask-puff-1" id="ask-puff-1" hidden></span>
         <span class="ask-puff ask-puff-2" id="ask-puff-2" hidden></span>
 
         <div class="ask-bubble" id="ask-bubble" hidden>
-          <svg class="ask-arrow" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor"
-               stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M5 12h13M13 6l6 6-6 6" />
-          </svg>
-          <span id="ask-target"></span>
+          <div class="ask-head">
+            <svg class="ask-arrow" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 12h13M13 6l6 6-6 6" />
+            </svg>
+            <span id="ask-target"></span>
+            <span class="ask-hint">Enter to open</span>
+          </div>
+          <!-- The browser parks a live view of the destination over this. -->
+          <div class="ask-screen" id="ask-screen"></div>
         </div>
 
         <form class="ask" id="ask-form">
@@ -314,6 +500,9 @@
     </main>
 
     <script src="../shared/clouds.js"></script>
+    <script src="../shared/theme.js"></script>
+    <script src="../shared/stars.js"></script>
+    <script src="../shared/birds.js"></script>
     <script src="./newtab.js"></script>
   </body>
 </html>

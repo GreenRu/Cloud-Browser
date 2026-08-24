@@ -21,7 +21,6 @@ const el = {
   address: $('address'),
   bookmark: $('bookmark'),
   findOpen: $('find-open'),
-  theme: $('theme'),
   menu: $('menu'),
   settings: $('settings'),
   sidebar: $('sidebar'),
@@ -51,6 +50,8 @@ const el = {
   stage: $('stage'),
   thought: $('thought'),
   thoughtLabel: $('thought-label'),
+  paneGrips: $('pane-grips'),
+  thoughtBubble: document.querySelector('.thought-bubble'),
   thoughtScreen: $('thought-screen'),
   thoughtUrl: $('thought-url')
 };
@@ -90,7 +91,7 @@ function activeTab() {
 function render(next) {
   Object.assign(state, next);
 
-  document.documentElement.dataset.theme = state.theme;
+  window.SkyTheme.apply({ base: state.themeBase, variables: state.themeVars });
   applySidebarWidth(state.sidebarWidth, { persist: false });
   strip.render(state.tabs, state.activeId);
 
@@ -98,16 +99,22 @@ function render(next) {
   const loading = Boolean(tab?.loading);
 
   document.body.classList.toggle('loading', loading);
+  // With a cloud on screen the stage is covered; its colour would only show in
+  // the seams between merged panes.
+  document.body.classList.toggle('has-tabs', state.tabs.length > 0);
   el.back.disabled = !tab?.canGoBack;
   el.forward.disabled = !tab?.canGoForward;
   el.reload.title = loading ? 'Stop loading (Esc)' : 'Reload (Ctrl+R)';
 
   const count = state.tabs.length;
-  el.tabCount.textContent = `${count} tab${count === 1 ? '' : 's'}`;
+  el.tabCount.textContent = `${count} cloud${count === 1 ? '' : 's'}`;
 
   if (!omniDirty && document.activeElement !== el.address) {
     el.address.value = displayUrl(tab);
   }
+
+  renderGrips(state);
+  renderPluginButtons(state);
 
   renderBadge(tab?.url || '');
 
@@ -346,13 +353,21 @@ function updateThought() {
   }, PREVIEW_SETTLE_MS);
 }
 
+/**
+ * Report both rects: where the live view goes, and where the card around it
+ * goes. The card has to be drawn as a view of its own - this renderer sits
+ * below the page, so the frame it draws here is hidden the moment a tab is
+ * open. What is measured here is what gets painted up there.
+ */
 function sendPreview(key) {
   const rect = el.thoughtScreen.getBoundingClientRect();
   if (!rect.width || !rect.height) return;
+  const card = el.thoughtBubble.getBoundingClientRect();
   api.preview.show(
     key,
     { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
-    { width: window.innerWidth, height: window.innerHeight }
+    { width: window.innerWidth, height: window.innerHeight },
+    { x: card.x, y: card.y, width: card.width, height: card.height }
   );
 }
 
@@ -448,9 +463,6 @@ el.reload.addEventListener('click', () => {
 el.bookmark.addEventListener('click', () => api.bookmarks.toggle());
 el.findOpen.addEventListener('click', () => openFind());
 el.settings.addEventListener('click', () => api.tabs.create('stratus://settings'));
-el.theme.addEventListener('click', () => {
-  api.view.setTheme(state.theme === 'night' ? 'day' : 'night');
-});
 el.menu.addEventListener('click', () => {
   const box = el.menu.getBoundingClientRect();
   api.app.openMenu(Math.round(box.left), Math.round(box.bottom + 4));
@@ -579,6 +591,174 @@ api.on.fullScreen((on) => {
   // The page view already covers the window in full screen; hiding the chrome
   // stops it painting underneath and keeps the transition clean.
   document.body.classList.toggle('full-screen', Boolean(on));
+});
+
+// Said just before the state that drops them: these clouds are joining that
+// one, so the strip moves them into it rather than closing them.
+// ------------------------------------------------------- buttons from plugins
+
+/**
+ * Buttons a plugin has asked for, put in the toolbar beside the browser's own.
+ *
+ * A plugin describes its icon rather than drawing it - outlines and circles -
+ * so nothing it says is ever treated as markup. It names a button to sit behind
+ * rather than a position, so the toolbar can change without breaking it.
+ */
+let toolbarSignature = '';
+
+function renderPluginButtons(state) {
+  const buttons = state.pluginToolbar || [];
+  // Rebuilt only when the set actually changes: this runs on every broadcast.
+  const signature = JSON.stringify(buttons);
+  if (signature === toolbarSignature) return;
+  toolbarSignature = signature;
+
+  for (const old of document.querySelectorAll('.tool-btn.from-plugin')) old.remove();
+
+  for (const button of buttons) {
+    const anchor = document.getElementById(button.after);
+    if (!anchor || !anchor.parentNode) continue;
+
+    const el = document.createElement('button');
+    el.className = 'tool-btn from-plugin';
+    el.type = 'button';
+    el.dataset.plugin = button.id;
+    el.title = button.label;
+    el.setAttribute('aria-label', button.label);
+    el.appendChild(pluginIcon(button.icon));
+    el.addEventListener('click', () => api.tabs.create(button.opens));
+
+    anchor.parentNode.insertBefore(el, anchor.nextSibling);
+  }
+}
+
+function pluginIcon(icon = {}) {
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('aria-hidden', 'true');
+
+  for (const d of icon.paths || []) {
+    const path = document.createElementNS(NS, 'path');
+    path.setAttribute('d', d);
+    svg.appendChild(path);
+  }
+  for (const [cx, cy, r] of icon.circles || []) {
+    const circle = document.createElementNS(NS, 'circle');
+    circle.setAttribute('cx', String(cx));
+    circle.setAttribute('cy', String(cy));
+    circle.setAttribute('r', String(r));
+    svg.appendChild(circle);
+  }
+
+  return svg;
+}
+
+// ---------------------------------------------------------------- pane seams
+
+/**
+ * A grip on each seam between merged panes, dragged to trade width between
+ * them. The browser reports where the seams are, since it is the one that
+ * placed the views; dragging one moves the views straight away and only tells
+ * the strip about it when the pointer is let go.
+ */
+const PANE_GAP = 8;
+let dragging = null;
+
+function renderGrips(state) {
+  const gutters = dragging ? [] : state.gutters || [];
+  const active = state.tabs.find((t) => t.id === state.activeId);
+  const sizes = active && active.paneSizes;
+
+  if (dragging || !gutters.length || !sizes) {
+    if (!dragging) el.paneGrips.replaceChildren();
+    return;
+  }
+
+  el.paneGrips.replaceChildren();
+  gutters.forEach((rect, index) => {
+    const grip = document.createElement('div');
+    grip.className = 'pane-grip';
+    grip.style.left = `${rect.x}px`;
+    grip.style.top = `${rect.y}px`;
+    grip.style.width = `${rect.width}px`;
+    grip.style.height = `${rect.height}px`;
+    grip.addEventListener('pointerdown', (event) => startDrag(event, grip, index, state));
+    el.paneGrips.appendChild(grip);
+  });
+}
+
+function startDrag(event, grip, index, state) {
+  const active = state.tabs.find((t) => t.id === state.activeId);
+  if (!active || !active.paneSizes) return;
+
+  event.preventDefault();
+  try {
+    grip.setPointerCapture(event.pointerId);
+  } catch {
+    // No capture available - the drag still works, it just stops at the edges
+    // of the window rather than following the pointer outside it.
+  }
+  grip.classList.add('dragging');
+  document.body.classList.add('resizing-panes');
+
+  const stage = el.stage.getBoundingClientRect();
+  dragging = {
+    id: active.id,
+    index,
+    grip,
+    startX: event.clientX,
+    from: active.paneSizes.slice(),
+    // Fractions are of the width the panes actually share, not of the stage.
+    usable: Math.max(1, stage.width - PANE_GAP * (active.paneSizes.length - 1))
+  };
+}
+
+function moveDrag(event) {
+  if (!dragging) return;
+  const { from, index, usable } = dragging;
+
+  // The two panes either side of this seam trade; the rest are untouched.
+  const min = Math.min(0.12, 1 / (from.length * 2));
+  const room = from[index] + from[index + 1];
+  let shift = (event.clientX - dragging.startX) / usable;
+  shift = Math.max(min - from[index], Math.min(from[index + 1] - min, shift));
+
+  const next = from.slice();
+  next[index] = from[index] + shift;
+  next[index + 1] = room - next[index];
+
+  dragging.last = next;
+  dragging.grip.style.left = `${el.stage.getBoundingClientRect().left +
+    next.slice(0, index + 1).reduce((a, b) => a + b, 0) * usable + index * PANE_GAP}px`;
+
+  // A pointer can report more often than the screen draws, and each of these
+  // resizes three live pages. One per frame is as much as is worth sending.
+  if (dragging.queued) return;
+  dragging.queued = requestAnimationFrame(() => {
+    if (!dragging) return;
+    dragging.queued = 0;
+    api.tabs.paneSizes(dragging.id, dragging.last);
+  });
+}
+
+function endDrag() {
+  if (!dragging) return;
+  if (dragging.queued) cancelAnimationFrame(dragging.queued);
+  if (dragging.last) api.tabs.paneSizes(dragging.id, dragging.last);
+  dragging.grip.classList.remove('dragging');
+  document.body.classList.remove('resizing-panes');
+  dragging = null;
+  // Take the browser's word for where the seams ended up.
+  api.getState().then(render).catch(() => {});
+}
+
+window.addEventListener('pointermove', moveDrag);
+window.addEventListener('pointerup', endDrag);
+window.addEventListener('pointercancel', endDrag);
+
+api.on.merged(({ host, ids }) => {
+  strip.expectMerge(host, ids || []);
 });
 
 api.on.previewTarget(({ url, live }) => {

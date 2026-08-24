@@ -39,14 +39,141 @@ function renderSearch() {
     })
   );
 
+  // Day and night, then anything a plugin is offering.
+  const themes = [
+    { id: 'day', name: 'Day' },
+    { id: 'night', name: 'Night' },
+    ...(settings.customThemes || []).map((t) => ({ id: t.id, name: `${t.name} (${t.pluginName})` }))
+  ];
+  $('theme').replaceChildren(
+    ...themes.map((t) => {
+      const option = document.createElement('option');
+      option.value = t.id;
+      option.textContent = t.name;
+      option.selected = t.id === settings.theme;
+      return option;
+    })
+  );
+
   $('homepage').value = settings.homepage;
-  $('theme').value = settings.theme;
+  $('restore-session').checked = settings.restoreSession !== false;
+  $('save-history').checked = settings.saveHistory !== false;
+  $('default-zoom').value = String(settings.defaultZoom || 1);
   $('show-full-url').checked = settings.showFullUrl !== false;
 }
 
 $('engine').addEventListener('change', (e) => patch({ searchEngine: e.target.value }));
-$('theme').addEventListener('change', (e) => patch({ theme: e.target.value }).then(applyTheme));
+$('theme').addEventListener('change', async (e) => {
+  await patch({ theme: e.target.value });
+  await applyTheme();
+  renderPalette();
+});
+
+/* ------------------------------------------------------------- theme editor */
+
+const palette = document.getElementById('palette');
+
+/**
+ * The editor for a theme a plugin offers: a control for every field that theme
+ * declared, in the groups it declared them in. Nothing here knows what any
+ * particular colour is for - the plugin said, and this draws what it said.
+ */
+function renderPalette() {
+  const theme = (settings.customThemes || []).find((t) => t.id === settings.theme);
+  palette.hidden = !theme;
+  palette.replaceChildren();
+  if (!theme) return;
+
+  const note = document.createElement('p');
+  note.className = 'palette-note';
+  note.textContent = `${theme.name}, from ${theme.pluginName}. ` +
+    'Changes apply as you make them.';
+  palette.appendChild(note);
+
+  // Group order follows the manifest, so a theme decides how it reads.
+  const groups = [];
+  for (const field of theme.fields) {
+    const name = field.group || '';
+    let group = groups.find((g) => g.name === name);
+    if (!group) groups.push((group = { name, fields: [] }));
+    group.fields.push(field);
+  }
+
+  for (const group of groups) {
+    if (group.name) {
+      const heading = document.createElement('p');
+      heading.className = 'palette-group';
+      heading.textContent = group.name;
+      palette.appendChild(heading);
+    }
+
+    const grid = document.createElement('div');
+    grid.className = 'palette-grid';
+
+    for (const field of group.fields) {
+      grid.appendChild(field.type === 'toggle'
+        ? paletteToggle(theme, field)
+        : paletteColor(theme, field));
+    }
+
+    palette.appendChild(grid);
+  }
+}
+
+function paletteColor(theme, field) {
+  const label = document.createElement('label');
+  label.className = 'swatch';
+
+  const input = document.createElement('input');
+  input.type = 'color';
+  input.value = String(theme.values[field.id] || '#ffffff');
+
+  const text = document.createElement('span');
+  text.textContent = field.label;
+
+  // `input` while dragging the picker, so the browser repaints as you choose.
+  input.addEventListener('input', async () => {
+    theme.values[field.id] = input.value;
+    await bridge.plugins.setThemeValue(theme.id, field.id, input.value);
+  });
+
+  label.append(input, text);
+  return label;
+}
+
+function paletteToggle(theme, field) {
+  const wrap = document.createElement('label');
+  wrap.className = 'swatch';
+
+  const input = document.createElement('input');
+  input.type = 'checkbox';
+  input.checked = Boolean(theme.values[field.id]);
+
+  const text = document.createElement('span');
+  text.textContent = field.label;
+
+  input.addEventListener('change', async () => {
+    theme.values[field.id] = input.checked;
+    await bridge.plugins.setThemeValue(theme.id, field.id, input.checked);
+  });
+
+  wrap.append(input, text);
+  return wrap;
+}
 $('homepage').addEventListener('change', (e) => patch({ homepage: e.target.value }));
+$('restore-session').addEventListener('change', (e) => patch({ restoreSession: e.target.checked }));
+$('save-history').addEventListener('change', (e) => patch({ saveHistory: e.target.checked }));
+$('default-zoom').addEventListener('change', (e) => patch({ defaultZoom: Number(e.target.value) }));
+
+$('open-history').addEventListener('click', () => bridge?.navigate('stratus://history'));
+$('open-bookmarks').addEventListener('click', () => bridge?.navigate('stratus://bookmarks'));
+
+$('clear-site-data').addEventListener('click', async () => {
+  const note = $('data-note');
+  note.textContent = 'Clearing...';
+  await bridge.settings.clearSiteData();
+  note.textContent = 'Cookies and site data cleared. Sites you were signed in to will ask again.';
+});
 $('show-full-url').addEventListener('change', (e) => patch({ showFullUrl: e.target.checked }));
 
 /* ---------------------------------------------------------------- shortcuts */
@@ -235,23 +362,109 @@ $('clear-history').addEventListener('click', async () => {
 /* ---------------------------------------------------------------- boot */
 
 function applyTheme() {
-  document.documentElement.dataset.theme = settings.theme || 'day';
+  window.SkyTheme.apply({ base: settings.themeBase, variables: settings.pageThemeVars });
 }
+
+/* ---------------------------------------------------------------- plugins */
+
+const pluginList = document.getElementById('plugin-list');
+const pluginNote = document.getElementById('plugin-note');
+
+function renderPlugins(state) {
+  pluginList.replaceChildren();
+
+  const { plugins = [], problems = [], directory = '' } = state || {};
+  const on = plugins.filter((p) => p.enabled).length;
+
+  pluginNote.textContent = plugins.length
+    ? `${on} of ${plugins.length} switched on. Installed in ${directory}.`
+    : `Nothing installed yet. Plugins go in ${directory}.`;
+
+  for (const plugin of plugins) {
+    const row = document.createElement('div');
+    row.className = 'row';
+
+    const text = document.createElement('div');
+    text.className = 'row-title';
+    text.textContent = `${plugin.name} ${plugin.version}`;
+
+    const detail = document.createElement('div');
+    detail.className = 'row-url';
+    const parts = [];
+    if (plugin.description) parts.push(plugin.description);
+    const c = plugin.counts;
+    const does = [
+      c.styles && `${c.styles} style${c.styles === 1 ? '' : 's'}`,
+      c.scripts && `${c.scripts} script${c.scripts === 1 ? '' : 's'}`,
+      c.shortcuts && `${c.shortcuts} keyword${c.shortcuts === 1 ? '' : 's'}`,
+      c.commands && `${c.commands} command${c.commands === 1 ? '' : 's'}`,
+      c.pages && `${c.pages} page${c.pages === 1 ? '' : 's'}`
+    ].filter(Boolean);
+    if (does.length) parts.push(does.join(', '));
+    detail.textContent = parts.join(' - ');
+
+    const cell = document.createElement('div');
+    cell.style.flex = '1 1 auto';
+    cell.style.minWidth = '0';
+    cell.append(text, detail);
+
+    const toggle = document.createElement('button');
+    toggle.className = 'ghost-btn';
+    toggle.textContent = plugin.enabled ? 'On' : 'Off';
+    toggle.addEventListener('click', async () => {
+      renderPlugins(await bridge.plugins.setEnabled(plugin.id, !plugin.enabled));
+    });
+
+    row.append(cell, toggle);
+    pluginList.appendChild(row);
+  }
+
+  // A plugin that would not load is worth saying so about, with the reason.
+  for (const problem of problems) {
+    const row = document.createElement('div');
+    row.className = 'row';
+    const cell = document.createElement('div');
+    const title = document.createElement('div');
+    title.className = 'row-title';
+    title.textContent = problem.path.split(/[\\/]/).pop() + ' would not load';
+    const why = document.createElement('div');
+    why.className = 'row-url';
+    why.textContent = problem.error;
+    cell.append(title, why);
+    row.appendChild(cell);
+    pluginList.appendChild(row);
+  }
+}
+
+document.getElementById('plugin-reload').addEventListener('click', async () => {
+  renderPlugins(await bridge.plugins.reload());
+});
+
+document.getElementById('plugin-folder').addEventListener('click', () => {
+  bridge.plugins.openFolder();
+});
 
 async function load() {
   if (!bridge) return;
   settings = await bridge.settings.read();
   applyTheme();
   renderSearch();
+  renderPalette();
   renderShortcuts();
   renderVaultState();
   renderHistory();
   renderPasswords();
+
+  try {
+    renderPlugins(await bridge.plugins.list());
+  } catch {
+    /* an older build of the browser simply has no plugin host */
+  }
 }
 
 load();
 
 // Follow the browser theme while the page is open, not just at load.
 bridge?.onTheme?.((theme) => {
-  document.documentElement.dataset.theme = theme;
+  window.SkyTheme.apply(theme);
 });

@@ -16,7 +16,7 @@ let nextTabId = 1;
  * chrome UI needs in order to draw its cloud.
  */
 class Tab {
-  constructor({ url, partition, onChange, onOpenTab, onContextMenu }) {
+  constructor({ url, partition, onChange, onOpenTab, onContextMenu, onDressPage, pluginDirs }) {
     this.id = `tab-${nextTabId++}`;
     this.onChange = onChange;
 
@@ -24,6 +24,10 @@ class Tab {
       webPreferences: {
         partition,
         preload: path.join(__dirname, '..', 'preload', 'page.js'),
+        // Which folders hold plugins, so the preload can recognise a plugin's
+        // own page. Passed rather than guessed: any other local file must not
+        // be mistaken for one.
+        additionalArguments: [`--stratus-plugin-dirs=${JSON.stringify(pluginDirs || [])}`],
         contextIsolation: true,
         nodeIntegration: false,
         sandbox: true,
@@ -48,6 +52,22 @@ class Tab {
     this.audible = false;
     this.errorUrl = null;   // URL we failed to load, kept visible in the omnibox
 
+    /*
+     * Where this cloud has been, as a tree rather than a list.
+     *
+     * Chromium keeps a line: go back three pages and follow a different link
+     * and the three you had ahead of you are gone. What actually happened is a
+     * fork, and this remembers it - every page keeps the page it was opened
+     * from, so the whole shape of a session's wandering survives.
+     *
+     * `marks` maps Chromium's own index onto our nodes, which is how a step
+     * back is told apart from a new page: the same index and URL coming round
+     * again is a move, anything else is somewhere new.
+     */
+    this.trail = [];
+    this.trailAt = null;    // the node the cloud is on now
+    this.marks = [];
+
     /**
      * Tabs shown beside this one after a merge. Whole Tab objects are kept, not
      * just their views, so a merged tab can be split apart again and so each
@@ -59,7 +79,13 @@ class Tab {
     this.extraPanes = [];
     this.hosted = false;  // true while another tab is showing this one
 
-    this._wire({ onOpenTab, onContextMenu });
+    /**
+     * How the width is shared between the panes, as fractions summing to one.
+     * Empty until someone drags a divider; until then the panes are equal.
+     */
+    this.sizes = [];
+
+    this._wire({ onOpenTab, onContextMenu, onDressPage });
     this.loadURL(url);
   }
 
@@ -69,6 +95,28 @@ class Tab {
 
   get destroyed() {
     return this.view.webContents.isDestroyed();
+  }
+
+  /** The share of the width each pane gets, always as many as there are panes. */
+  paneSizes() {
+    const n = this.paneCount;
+    if (this.sizes.length !== n) this.sizes = new Array(n).fill(1 / n);
+    return this.sizes;
+  }
+
+  /**
+   * Set the shares from a drag. Every pane keeps a usable minimum, and what is
+   * left over is spread so they still add up to the whole width.
+   */
+  setPaneSizes(next) {
+    const n = this.paneCount;
+    if (!Array.isArray(next) || next.length !== n) return false;
+
+    const min = Math.min(0.12, 1 / (n * 2));
+    const clamped = next.map((v) => (Number.isFinite(v) ? Math.max(min, v) : min));
+    const total = clamped.reduce((a, b) => a + b, 0);
+    this.sizes = clamped.map((v) => v / total);
+    return true;
   }
 
   /** Every view this tab is responsible for, left to right. */
@@ -94,6 +142,8 @@ class Tab {
       pane.hosted = true;
       this.extraPanes.push(pane);
     }
+    // A new pane means the old shares no longer describe the row.
+    this.sizes = [];
   }
 
   /**
@@ -103,6 +153,7 @@ class Tab {
   release() {
     const freed = this.extraPanes;
     this.extraPanes = [];
+    this.sizes = [];
     for (const pane of freed) pane.hosted = false;
     return freed;
   }
@@ -112,6 +163,7 @@ class Tab {
     return {
       id: this.id,
       panes: this.paneCount,
+      paneSizes: this.paneCount > 1 ? this.paneSizes().slice() : null,
       paneTitles: this.extraPanes.map((pane) => pane.title),
       url: this.errorUrl || prettifyUrl(this.url),
       title: this.title,
@@ -128,12 +180,13 @@ class Tab {
     this.onChange?.(this);
   }
 
-  _wire({ onOpenTab, onContextMenu }) {
+  _wire({ onOpenTab, onContextMenu, onDressPage }) {
     const wc = this.webContents;
 
     wc.on('page-title-updated', (_e, title) => {
       this.title = title || hostLabel(this.url);
       this._emit();
+      this._renameStep();
     });
 
     wc.on('page-favicon-updated', (_e, favicons) => {
@@ -152,14 +205,55 @@ class Tab {
       this._emit();
     });
 
+    /**
+     * One step of the journey. Called for every main-frame navigation, whether
+     * it is somewhere new or a step back through where we have been.
+     */
+    const onStep = (url) => {
+      if (this.destroyed || !url || /^about:blank$/i.test(url)) return;
+
+      const index = this.webContents.navigationHistory.getActiveIndex();
+      const known = this.marks[index];
+      const already = known && this.trail.find((n) => n.id === known);
+
+      if (already && already.url === url) {
+        // Back or forward: the same place we already know about.
+        this.trailAt = already.id;
+        return;
+      }
+
+      const node = {
+        id: `${this.id}-n${this.trail.length}`,
+        parent: this.trailAt,
+        url,
+        title: this.title || hostLabel(url),
+        at: Date.now()
+      };
+      this.trail.push(node);
+      this.trailAt = node.id;
+
+      // Chromium has just thrown away everything that was ahead of here. Our
+      // tree keeps those pages - they simply become a branch nobody is on.
+      this.marks.length = index;
+      this.marks[index] = node.id;
+    };
+
     const onNavigated = (url) => {
       if (url.startsWith('file://') && url.includes('/pages/error.html')) return;
       this.errorUrl = null;
       this.url = url;
       if (!this.title || this.title === 'New Tab') this.title = hostLabel(url);
+      onStep(url);
       this._syncNavState();
       this._emit();
     };
+
+    /*
+     * Plugins get their turn here, once per page, before anything else runs.
+     * They are handed the URL and nothing else; whether anything applies to it
+     * is the plugin host's decision, not this tab's.
+     */
+    wc.on('dom-ready', () => onDressPage?.(this, wc.getURL()));
 
     wc.on('did-navigate', (_e, url) => onNavigated(url));
     wc.on('did-navigate-in-page', (_e, url, isMainFrame) => {
@@ -206,6 +300,12 @@ class Tab {
       }
       return { action: 'deny' };
     });
+  }
+
+  /** Keep the trail's own name for a page in step with the page's title. */
+  _renameStep() {
+    const node = this.trail.find((n) => n.id === this.trailAt);
+    if (node && this.title) node.title = this.title;
   }
 
   _syncNavState() {
@@ -263,4 +363,4 @@ class Tab {
   }
 }
 
-module.exports = { Tab };
+module.exports = { Tab, PAGE_RADIUS };

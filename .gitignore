@@ -4,11 +4,42 @@ node_modules/
 # build output
 dist/
 CloudBrowser-win32-x64/
+Stratus-win32-*/
+*.asar
+
+# ---------------------------------------------------------------------------
+# Anything that could carry a person's own data.
+#
+# None of this belongs in the repository and none of it has ever been in it:
+# the browser keeps its profile in the OS user-data directory (on Windows,
+# %APPDATA%\Stratus), which is nowhere near this folder. These rules are here
+# so that a profile copied in for debugging, or a test run pointed at the wrong
+# place, cannot be committed by accident.
+# ---------------------------------------------------------------------------
+logins.json
+state.json
+profile/
+profiles/
+*.profile/
+Local State
+Local Storage/
+Session Storage/
+IndexedDB/
+Cookies
+Cookies-journal
+Network/
+Cache/
+Code Cache/
+GPUCache/
+*.ldb
+*.sst
 
 # logs and local scratch
 *.log
 npm-debug.log*
 .scratch/
+scratch/
+tmp/
 
 # editor / OS
 .vscode/

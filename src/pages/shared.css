@@ -98,6 +98,119 @@ button {
 
 .field:focus { border-color: var(--accent); }
 
+/* The palette editor: one swatch per colour the interface uses, in the groups
+   the theme declared them in. */
+.palette {
+  margin: 4px 0 18px;
+  padding: 16px 18px;
+  border: 1px solid var(--card-line);
+  border-radius: 16px;
+  background: var(--card);
+}
+
+.palette[hidden] { display: none; }
+
+.palette-note {
+  margin: 0 0 14px;
+  color: var(--text-dim);
+  font-size: 12.5px;
+}
+
+.palette-group {
+  margin: 0 0 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.palette-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 8px 18px;
+  margin-bottom: 20px;
+}
+
+.palette-grid:last-child { margin-bottom: 0; }
+
+.swatch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12.5px;
+  color: var(--text);
+}
+
+.swatch span {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The colour itself is the control, so it is drawn as a chip rather than as
+   whatever the platform would otherwise give us. */
+.swatch input[type="color"] {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--card-line);
+  border-radius: 8px;
+  background: none;
+  cursor: pointer;
+}
+
+.swatch input[type="color"]::-webkit-color-swatch-wrapper { padding: 2px; }
+.swatch input[type="color"]::-webkit-color-swatch { border: 0; border-radius: 6px; }
+
+/* A day of history: its name and count on the left, a way to forget the whole
+   of it on the right. */
+.group-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin: 26px 0 10px;
+}
+
+.group-head .group-label { margin: 0; flex: 1 1 auto; }
+
+.group-clear {
+  flex: 0 0 auto;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-dim);
+  opacity: 0;
+  transition: opacity 140ms ease, background 140ms ease, color 140ms ease;
+}
+
+.group-head:hover .group-clear { opacity: 1; }
+.group-clear:hover { background: rgba(214, 84, 84, 0.16); color: #d65454; }
+
+/* The site's own mark, or the raining cloud for anything that has none. */
+.row-icon {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+}
+
+.row-icon img { width: 16px; height: 16px; object-fit: contain; }
+.row-icon svg { width: 16px; height: 16px; }
+.row-icon.is-rain { color: var(--drift-far); }
+
+/* In a toolbar row the text field takes the room and the rest keep their size,
+   so a narrow window shortens the search box rather than pushing the buttons
+   off the end of it. */
+.toolbar-row .field { flex: 1 1 auto; min-width: 0; }
+.toolbar-row .field.narrow,
+.toolbar-row .ghost-btn { flex: 0 0 auto; width: auto; white-space: nowrap; }
+
 .row {
   display: flex;
   align-items: center;

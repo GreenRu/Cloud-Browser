@@ -30,6 +30,12 @@
   --danger: #d94a4a;
   --stage: #eaf3fc;
   --rain: #8fa3ba;
+  --rain-drop: rgba(255, 255, 255, 0.85);
+  --pool-deep: rgba(255, 255, 255, 0.26);
+  --pool-shallow: rgba(255, 255, 255, 0.5);
+  --pool-rim: rgba(255, 255, 255, 0.72);
+  --pool-glow: rgba(255, 255, 255, 0.55);
+  --pool-sheen: rgba(255, 255, 255, 0.85);
   --scroll-thumb: rgba(255, 255, 255, 0.55);
   --bubble: #ffffff;
   --new-cloud-line: rgba(255, 255, 255, 0.6);
@@ -73,6 +79,12 @@
   --accent: #6aa9ff;
   --stage: #0d1524;
   --rain: #7c8ea6;
+  --rain-drop: rgba(190, 214, 240, 0.5);
+  --pool-deep: rgba(120, 165, 215, 0.14);
+  --pool-shallow: rgba(160, 200, 240, 0.26);
+  --pool-rim: rgba(196, 222, 248, 0.4);
+  --pool-glow: rgba(150, 195, 240, 0.3);
+  --pool-sheen: rgba(215, 235, 255, 0.5);
   --scroll-thumb: rgba(255, 255, 255, 0.16);
   --bubble: #1b2740;
   --new-cloud-line: rgba(255, 255, 255, 0.16);
@@ -288,10 +300,6 @@ svg {
 .loading #reload .icon-reload { display: none; }
 .loading #reload .icon-stop { display: block; }
 
-#theme .icon-night { display: none; }
-[data-theme="night"] #theme .icon-day { display: none; }
-[data-theme="night"] #theme .icon-night { display: block; }
-
 /* ---------- cloud tabs ---------- */
 
 .tab-scroll {
@@ -408,12 +416,47 @@ svg {
   to { opacity: 1; transform: none; }
 }
 
-/* Closing clouds deflate instead of blinking out. */
-.tab.leaving {
+/* A cloud that has joined another slides up to it and passes behind it. Taken
+   out of the flow first, so the strip closes up as it goes rather than after.
+   The script supplies the coordinates; this is the manner of the move. */
+.tab.joining {
+  position: fixed;
+  z-index: -1;
   pointer-events: none;
+  animation: none;
+  transition: transform 420ms cubic-bezier(0.33, 0.9, 0.4, 1),
+    opacity 420ms cubic-bezier(0.5, 0, 0.75, 0);
+}
+
+/* A closing cloud drifts clear of the strip before it goes: pinned to the spot
+   it occupied and taken out of the flow, so the clouds below close the gap at
+   once, then carried down below the new-cloud button to rain itself out in open
+   sky. The exact coordinates come from the script; only the manner of going is
+   here. Behind the others, so a drifting ghost never sits on a live cloud. */
+.tab.adrift {
+  position: fixed;
+  z-index: -1;
+  pointer-events: none;
+  /* The entrance animation is filled forwards, and a filled animation outranks
+     inline styles and transitions alike - it pinned the ghost's transform and
+     opacity to their end values, so neither the drift nor the fade ran. */
+  animation: none;
+  transition: transform 620ms cubic-bezier(0.33, 0.9, 0.4, 1);
+}
+
+/* Then, having arrived, it fades where it stands. */
+.tab.adrift.leaving {
   opacity: 0;
-  transform: translateX(-10px) scale(0.8);
-  transition: opacity 180ms var(--ease), transform 180ms var(--ease);
+  transition: opacity 3s linear;
+}
+
+/* The close button is normally hover-only, and the pointer stops counting as
+   hovering the moment the cloud goes inert - which would snap the button out
+   instead of fading it. Hold it visible and let the cloud's own fade carry it,
+   so body, label and cross go together. */
+.tab.leaving .tab-close {
+  opacity: 0.55;
+  transition: none;
 }
 
 .tab:hover:not(.active) { transform: translateX(3px); }
@@ -521,8 +564,12 @@ svg {
 
 .tab-audio { flex: 0 0 auto; width: 14px; height: 14px; opacity: 0.75; }
 
-/* Centred on the cloud's body rather than riding the text baseline. */
-.tab-close {
+/* Centred on the cloud's body rather than riding the text baseline.
+
+   The child selector is load-bearing: `.tab > *:not(.lobe)` above sets position
+   relative on every child and outranks a plain `.tab-close`, which left the
+   button in the flex flow with `top: 50%` shoving it below the centre line. */
+.tab > .tab-close {
   position: absolute;
   right: 9px;
   top: 50%;
@@ -580,8 +627,7 @@ svg {
 .sidebar.collapsed .tab-title,
 .sidebar.collapsed .tab-audio,
 .sidebar.collapsed #home,
-.sidebar.collapsed #find-open,
-.sidebar.collapsed #theme { display: none; }
+.sidebar.collapsed #find-open { display: none; }
 
 /* Collapsed, the close button sits over the favicon rather than beside it -
    there is nowhere else for it to go - and stays translucent so the icon it
@@ -695,9 +741,12 @@ svg {
   to { transform: scale(1.16); }
 }
 
+/* Built to the same pattern as the new tab page's bubble: a card with the
+   destination across the top and the live view below, the card showing as a
+   ring of colour around it. */
 .thought-bubble {
   pointer-events: auto;
-  padding: 0 7px 7px;
+  padding: 4px 12px 12px;
   border-radius: 22px;
   background: var(--bubble);
   box-shadow: 0 16px 38px rgba(16, 44, 76, 0.3), 0 3px 8px rgba(16, 44, 76, 0.16);
@@ -706,14 +755,14 @@ svg {
 .thought-head {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 9px 10px 8px;
+  gap: 10px;
+  padding: 7px 8px 9px;
 }
 
 .thought-label {
   flex: 1 1 auto;
   min-width: 0;
-  font-size: 11.5px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--text);
   overflow: hidden;
@@ -723,13 +772,10 @@ svg {
 
 .thought-hint {
   flex: 0 0 auto;
-  padding: 3px 9px;
-  border-radius: 999px;
-  background: var(--hover);
-  color: var(--text-dim);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.2px;
+  color: var(--text-dim);
 }
 
 /* The live view is positioned over exactly this rect, with a matching radius. */
@@ -764,9 +810,16 @@ svg {
 
 .thought-arrow {
   flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  color: var(--accent);
+}
+
+/* Only the one inside the screen nudges - it is the whole of what that state
+   has to say. The one in the head sits still beside the address it labels. */
+.thought-destination .thought-arrow {
   width: 15px;
   height: 15px;
-  color: var(--accent);
   animation: nudge 1.5s var(--ease) infinite alternate;
 }
 
@@ -782,6 +835,173 @@ body.full-screen .titlestrip,
 body.full-screen .drawer { display: none; }
 
 body.full-screen .stage { margin: 0; border-radius: 0; }
+
+/* ---------- rain from closing clouds ---------- */
+
+.rain-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: -1;  /* over the sky, behind the clouds */
+}
+
+.raindrop {
+  position: absolute;
+  width: 3px;
+  height: 9px;
+  border-radius: 2px;
+  background: var(--rain-drop);
+  opacity: 0;
+  animation-name: raindrop-fall;
+  animation-timing-function: cubic-bezier(0.55, 0, 0.85, 0.5);
+  animation-fill-mode: both;
+}
+
+@keyframes raindrop-fall {
+  0% { transform: translateY(0) scaleY(0.6); opacity: 0; }
+  14% { opacity: 0.7; }
+  85% { opacity: 0.65; }
+  100% { transform: translateY(var(--dy)) scaleY(1.2); opacity: 0; }
+}
+
+/* Spans the sky and lies along its foot, gathering while the rain falls,
+   sitting for three seconds, then drying up over the last one. Only the top
+   comes from the script; the width is the whole width, always.
+
+   Water, not a smudge: shallow and bright where it thins out at the rim, deeper
+   through the middle, sitting in its own soft shadow, with a highlight lying on
+   the surface. */
+.puddle {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  height: 22px;
+  margin-top: -11px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, var(--pool-deep), var(--pool-shallow) 76%, var(--pool-rim));
+  box-shadow:
+    inset 0 1px 1.5px var(--pool-rim),      /* the wet line where it meets the ground */
+    inset 0 -3px 6px var(--pool-glow),      /* light gathering along the near edge */
+    0 2px 7px rgba(16, 44, 76, 0.14);       /* seated, rather than floating */
+  opacity: 0;
+}
+
+/* A highlight lying on the surface, sliding the slow way water does. */
+.puddle::after {
+  content: '';
+  position: absolute;
+  left: 16%;
+  top: 24%;
+  width: 36%;
+  height: 30%;
+  border-radius: 50%;
+  background: linear-gradient(90deg, transparent, var(--pool-sheen), transparent);
+  filter: blur(1.5px);
+  animation: pool-sheen 5.4s ease-in-out infinite alternate;
+}
+
+/* Two rings, while the rain is still falling into it. */
+.puddle::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1px solid var(--pool-rim);
+  opacity: 0;
+  animation: pool-ripple 2.4s ease-out 300ms 2 both;
+}
+
+.puddle.gather { animation: puddle-life 6.6s ease forwards; }
+
+@keyframes puddle-life {
+  0% { opacity: 0; transform: scale(0.55, 0.35); }
+  38% { opacity: 0.85; transform: scale(1, 1); }
+  85% { opacity: 0.85; transform: scale(1, 1); }
+  100% { opacity: 0; transform: scale(1.04, 0.8); }
+}
+
+@keyframes pool-sheen {
+  from { transform: translateX(-12%) scaleX(0.88); opacity: 0.45; }
+  to { transform: translateX(16%) scaleX(1.1); opacity: 0.9; }
+}
+
+@keyframes pool-ripple {
+  0% { transform: scale(0.72); opacity: 0; }
+  30% { opacity: 0.4; }
+  100% { transform: scale(1.02); opacity: 0; }
+}
+
+/* The stage is only ever a stand-in for the page: it holds the shape while
+   nothing is loaded and tells the browser where to put the views. Once a cloud
+   is showing, its colour would only appear in the seams - down the gutter
+   between merged panes - so it steps out of the way and lets the sky show
+   there instead. */
+body.has-tabs .stage { background: transparent; }
+
+
+/* The mark and the wordmark are the empty state. With a cloud on screen they
+   are behind it - except in the seam between merged panes, where they would
+   show through in pieces. */
+body.has-tabs .stage > * { display: none; }
+
+/* ---------- the seam between merged panes ---------- */
+
+/*
+ * The seam shows the sky, the same as the space around the page does.
+ *
+ * It is painted rather than left as a hole, and painted with `fixed`
+ * attachment: that measures the gradient against the window instead of against
+ * this narrow element, so the slice showing through the seam is exactly the
+ * slice of sky that would have been there anyway.
+ */
+.pane-grip {
+  position: fixed;
+  z-index: 15;
+  cursor: col-resize;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(180deg, var(--sky-top), var(--sky-bottom)) fixed;
+}
+
+/*
+ * Reaching under the panes on either side. Each view is rounded, so the
+ * quarter-circle notches where two of them meet belong to neither view - which
+ * left the seam noticeably wider at the top than along its length, and wider
+ * onto the lightest part of the sky at that. Filling them from the same
+ * gradient keeps it one even strip from top to bottom.
+ */
+.pane-grip::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -14px;   /* the radius each view is rounded to */
+  right: -14px;
+  background: inherit;
+  z-index: -1;
+}
+
+/* The seam itself is only a few pixels; the bar inside it is what you grab, and
+   it stays out of the way until the pointer is on it. */
+.pane-grip::after {
+  content: '';
+  width: 3px;
+  height: 42px;
+  border-radius: 3px;
+  background: var(--text-on-sky);
+  opacity: 0;
+  transform: scaleY(0.4);
+  transition: opacity var(--t-mid) var(--ease), transform var(--t-mid) var(--spring);
+}
+
+.pane-grip:hover::after,
+.pane-grip.dragging::after { opacity: 0.75; transform: none; }
+.pane-grip.dragging { cursor: col-resize; }
+
+/* While a divider is being dragged the pointer must not be able to wander onto
+   something else and start hovering it. */
+body.resizing-panes { cursor: col-resize; }
 
 /* ---------- main column ---------- */
 

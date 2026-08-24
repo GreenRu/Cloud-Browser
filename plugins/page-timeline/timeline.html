@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy"
+          content="default-src 'none'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data: https:;" />
+    <title>Page Timeline</title>
+    <style>
+      /*
+       * A plugin page carries its own look. It cannot reach the browser's
+       * stylesheet, and should not want to - it is handed the theme's colours
+       * and builds from those.
+       */
+      :root {
+        --ink: #21364d;
+        --ink-dim: #5f7791;
+        --card: #ffffff;
+        --line: rgba(15, 23, 42, 0.10);
+        --accent: #2b7fe0;
+        --sky-top: #f6faff;
+        --sky-bottom: #e4f0fb;
+        --branch: #a8c9e6;
+      }
+
+      [data-theme="night"] {
+        --ink: #dbe6f6;
+        --ink-dim: #8ea4c2;
+        --card: #1d2b45;
+        --line: rgba(255, 255, 255, 0.09);
+        --accent: #6aa9ff;
+        --sky-top: #141d2f;
+        --sky-bottom: #0d1524;
+        --branch: #45608a;
+      }
+
+      * { box-sizing: border-box; }
+
+      html, body { height: 100%; }
+
+      body {
+        margin: 0;
+        min-height: 100%;
+        font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+        color: var(--ink);
+        background: linear-gradient(180deg, var(--sky-top), var(--sky-bottom));
+        background-attachment: fixed;
+      }
+
+      main { max-width: 900px; margin: 0 auto; padding: 46px 32px 60px; }
+
+      h1 {
+        margin: 0 0 6px;
+        font-size: 26px;
+        font-weight: 700;
+        letter-spacing: -0.3px;
+      }
+
+      .sub { margin: 0 0 26px; color: var(--ink-dim); font-size: 14px; }
+
+      .cloud {
+        margin-bottom: 22px;
+        padding: 18px 20px 20px;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: var(--card);
+        box-shadow: 0 10px 30px rgba(20, 45, 75, 0.10);
+      }
+
+      .cloud-head {
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+        margin-bottom: 4px;
+      }
+
+      .cloud-title {
+        flex: 1 1 auto;
+        min-width: 0;
+        font-size: 15px;
+        font-weight: 650;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .cloud-count { flex: 0 0 auto; font-size: 12px; color: var(--ink-dim); }
+
+      /* The graph. Rows are steps in time; the tree is drawn into them. */
+      .graph { position: relative; margin-top: 10px; }
+
+      .edge {
+        position: absolute;
+        border-left: 2px solid var(--branch);
+        border-bottom: 2px solid var(--branch);
+        border-bottom-left-radius: 9px;
+        pointer-events: none;
+      }
+
+      .edge.straight { border-bottom: 0; border-bottom-left-radius: 0; }
+
+      .node {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        height: 34px;
+        padding: 0 12px 0 10px;
+        border-radius: 999px;
+        cursor: pointer;
+        transition: background 120ms linear;
+      }
+
+      .node:hover { background: rgba(127, 160, 200, 0.16); }
+
+      .dot {
+        flex: 0 0 auto;
+        width: 11px;
+        height: 11px;
+        border-radius: 50%;
+        border: 2px solid var(--branch);
+        background: var(--card);
+      }
+
+      .node.here .dot { border-color: var(--accent); background: var(--accent); }
+      .node.here .label { font-weight: 700; }
+
+      /* A page that was left behind when the trail forked. */
+      .node.aside .label { color: var(--ink-dim); }
+      .node.aside .dot { border-style: dashed; }
+
+      .label {
+        flex: 1 1 auto;
+        min-width: 0;
+        font-size: 13.5px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .where { flex: 0 0 auto; font-size: 11.5px; color: var(--ink-dim); }
+      .when { flex: 0 0 auto; font-size: 11.5px; color: var(--ink-dim); font-variant-numeric: tabular-nums; }
+
+      .empty {
+        padding: 34px 20px;
+        border: 1px dashed var(--line);
+        border-radius: 18px;
+        color: var(--ink-dim);
+        text-align: center;
+        font-size: 14px;
+      }
+
+      .legend {
+        display: flex;
+        gap: 18px;
+        margin-top: 26px;
+        color: var(--ink-dim);
+        font-size: 12px;
+      }
+
+      .legend span { display: flex; align-items: center; gap: 7px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Page timeline</h1>
+      <p class="sub" id="sub">Reading…</p>
+      <div id="clouds"></div>
+      <div class="legend">
+        <span><i class="dot" style="border-color: var(--accent); background: var(--accent);"></i> where the cloud is now</span>
+        <span><i class="dot" style="border-style: dashed;"></i> a page you turned back from</span>
+      </div>
+    </main>
+    <script src="./timeline.js"></script>
+  </body>
+</html>

@@ -139,6 +139,37 @@
           </div>
           <div class="setting">
             <div class="setting-label">
+              <b>Reopen last session</b>
+              <small>Start with the clouds that were open when you last closed the browser, rather than the home page.</small>
+            </div>
+            <div class="setting-control">
+              <label class="toggle">
+                <input type="checkbox" id="restore-session" />
+                <span></span>
+              </label>
+            </div>
+          </div>
+          <div class="setting">
+            <div class="setting-label">
+              <b>Page zoom</b>
+              <small>How big every page starts. Ctrl and + or - still changes the page in front on its own.</small>
+            </div>
+            <div class="setting-control">
+              <select class="field" id="default-zoom">
+                <option value="0.67">67%</option>
+                <option value="0.8">80%</option>
+                <option value="0.9">90%</option>
+                <option value="1">100%</option>
+                <option value="1.1">110%</option>
+                <option value="1.25">125%</option>
+                <option value="1.5">150%</option>
+                <option value="1.75">175%</option>
+                <option value="2">200%</option>
+              </select>
+            </div>
+          </div>
+          <div class="setting">
+            <div class="setting-label">
               <b>Show full address</b>
               <small>Off shows just the site — <code>news.ycombinator.com</code> — and reveals the whole address when you click the bar.</small>
             </div>
@@ -151,16 +182,17 @@
           </div>
           <div class="setting">
             <div class="setting-label">
-              <b>Appearance</b>
-              <small>Day or night, applied everywhere at once.</small>
+              <b>Theme</b>
+              <small>Applied everywhere at once - the browser, its own pages, and the web.</small>
             </div>
             <div class="setting-control">
-              <select class="field" id="theme">
-                <option value="day">Day</option>
-                <option value="night">Night</option>
-              </select>
+              <select class="field" id="theme"></select>
             </div>
           </div>
+
+          <!-- Only when the theme in use is one a plugin offers, and made of
+               whatever fields that theme declared. -->
+          <div class="palette" id="palette" hidden></div>
         </div>
       </section>
 
@@ -216,13 +248,46 @@
       </section>
 
       <section class="section">
-        <h2 class="section-title">Browsing data</h2>
-        <p class="section-note" id="history-note"></p>
+        <h2 class="section-title">Plugins</h2>
+        <p class="section-note" id="plugin-note"></p>
+        <div class="rows" id="plugin-list"></div>
         <div class="toolbar-row">
-          <button class="ghost-btn danger" id="clear-history">Clear browsing history</button>
+          <button class="ghost-btn" id="plugin-folder">Open plugins folder</button>
+          <button class="ghost-btn" id="plugin-reload">Reload plugins</button>
         </div>
       </section>
+
+      <section class="section">
+        <h2 class="section-title">Browsing data</h2>
+        <p class="section-note" id="history-note"></p>
+
+        <div class="setting">
+          <div class="setting-label">
+            <b>Remember pages you visit</b>
+            <small>Off stops anything new being written down. What is already there stays until you clear it.</small>
+          </div>
+          <div class="setting-control">
+            <label class="toggle">
+              <input type="checkbox" id="save-history" />
+              <span></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="toolbar-row">
+          <button class="ghost-btn" id="open-history">Open history</button>
+          <button class="ghost-btn" id="open-bookmarks">Open bookmarks</button>
+        </div>
+        <div class="toolbar-row">
+          <button class="ghost-btn danger" id="clear-history">Clear browsing history</button>
+          <button class="ghost-btn danger" id="clear-site-data">Clear cookies and site data</button>
+        </div>
+        <p class="section-note" id="data-note"></p>
+      </section>
     </main>
+    <script src="../shared/theme.js"></script>
+    <script src="../shared/stars.js"></script>
+    <script src="../shared/birds.js"></script>
     <script src="./settings.js"></script>
   </body>
 </html>

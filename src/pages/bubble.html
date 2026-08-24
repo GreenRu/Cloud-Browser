@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy"
+          content="default-src 'none'; style-src 'self' 'unsafe-inline'; script-src 'self';" />
+    <title>Preview frame</title>
+    <style>
+      /*
+       * The card the address bar's preview sits in.
+       *
+       * It exists as its own view because the chrome renderer is *below* the
+       * page - a tab is a native view stacked over it - so a frame drawn there
+       * is hidden the moment a page is open. This view is stacked above the
+       * page and below the preview, which leaves exactly the head row and the
+       * ring of padding showing around the live view. That is the bubble.
+       *
+       * The measurements here have to match the ones in the chrome's own
+       * stylesheet: that DOM is what reports where the live view goes, and this
+       * is what you actually see around it.
+       */
+      :root {
+        --bubble: #ffffff;
+        --text: #22364c;
+        --text-dim: #5f7a96;
+        --accent: #2472cf;
+        --stage: #eaf3fc;
+        --ui-font: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+      }
+
+      [data-theme="night"] {
+        --bubble: #1b2740;
+        --text: #dbe6f6;
+        --text-dim: #8299b9;
+        --accent: #6aa9ff;
+        --stage: #0d1524;
+      }
+
+      * { box-sizing: border-box; }
+
+      html, body {
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        background: transparent;
+        font-family: var(--ui-font);
+        user-select: none;
+        -webkit-user-select: none;
+        cursor: pointer;
+      }
+
+      .card {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        padding: 4px 12px 12px;
+        border-radius: 22px;
+        background: var(--bubble);
+      }
+
+      .head {
+        flex: 0 0 auto;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 7px 8px 9px;
+      }
+
+      .arrow {
+        flex: 0 0 auto;
+        width: 16px;
+        height: 16px;
+        color: var(--accent);
+      }
+
+      .url {
+        flex: 1 1 auto;
+        min-width: 0;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .hint {
+        flex: 0 0 auto;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.2px;
+        color: var(--text-dim);
+      }
+
+      /* The live view lands over exactly this, with a matching radius. Until it
+         does, this is what shows through. */
+      .screen {
+        flex: 1 1 auto;
+        min-height: 0;
+        border-radius: 15px;
+        background: var(--stage);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="head">
+        <svg class="arrow" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 12h13M13 6l6 6-6 6" />
+        </svg>
+        <span class="url" id="url"></span>
+        <span class="hint">Enter to open</span>
+      </div>
+      <div class="screen"></div>
+    </div>
+    <script src="./bubble.js"></script>
+  </body>
+</html>

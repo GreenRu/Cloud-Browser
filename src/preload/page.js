@@ -7,9 +7,32 @@ const { contextBridge, ipcRenderer } = require('electron');
    bookmarks, settings, error).
    ============================================================ */
 
+const here = decodeURIComponent(location.pathname).replace(/\\/g, '/').toLowerCase();
+
 const isInternalPage =
+  location.protocol === 'file:' && /\/src\/pages\//.test(here);
+
+/*
+ * A page belonging to a plugin, which is a different thing from one of the
+ * browser's own. The folders plugins live in are handed to this preload by the
+ * main process; a local file anywhere else is just a local file, and gets
+ * nothing.
+ */
+const pluginDirs = (() => {
+  const arg = (process.argv || []).find((a) => a.startsWith('--stratus-plugin-dirs='));
+  if (!arg) return [];
+  try {
+    return JSON.parse(arg.slice('--stratus-plugin-dirs='.length))
+      .map((dir) => String(dir).replace(/\\/g, '/').toLowerCase());
+  } catch {
+    return [];
+  }
+})();
+
+const isPluginPage =
   location.protocol === 'file:' &&
-  /[\\/]src[\\/]pages[\\/]/.test(decodeURIComponent(location.pathname));
+  !isInternalPage &&
+  pluginDirs.some((dir) => here.startsWith(dir.startsWith('/') ? dir : `/${dir}`));
 
 if (isInternalPage) {
   contextBridge.exposeInMainWorld('cloudPage', {
@@ -17,17 +40,37 @@ if (isInternalPage) {
     openTab: (url, background = false) => ipcRenderer.send('tab:new', url, { background }),
     reload: () => ipcRenderer.send('nav:reload'),
     resolve: (input) => ipcRenderer.invoke('preview:resolve', input),
+    preview: {
+      show: (input, rect, viewport) => ipcRenderer.send('preview:show-in-page', input, rect, viewport),
+      hide: () => ipcRenderer.send('preview:hide')
+    },
     getState: () => ipcRenderer.invoke('shell:get-state'),
     history: {
       list: (limit) => ipcRenderer.invoke('history:list', limit),
+      remove: (url, visitedAt) => ipcRenderer.invoke('history:remove', url, visitedAt),
+      clearBetween: (from, to) => ipcRenderer.invoke('history:clear-between', from, to),
       clear: () => ipcRenderer.send('history:clear')
     },
     bookmarks: {
       remove: (id) => ipcRenderer.send('bookmark:remove', id)
     },
+    sky: {
+      list: () => ipcRenderer.invoke('sky:list'),
+      add: (entry) => ipcRenderer.invoke('sky:add', entry),
+      remove: (id) => ipcRenderer.invoke('sky:remove', id)
+    },
+    plugins: {
+      list: () => ipcRenderer.invoke('plugins:list'),
+      setEnabled: (id, on) => ipcRenderer.invoke('plugins:set-enabled', id, on),
+      reload: () => ipcRenderer.invoke('plugins:reload'),
+      openFolder: () => ipcRenderer.invoke('plugins:open-folder'),
+      setThemeValue: (theme, field, value) =>
+        ipcRenderer.invoke('plugins:set-theme-value', theme, field, value)
+    },
     settings: {
       read: () => ipcRenderer.invoke('settings:read'),
-      update: (patch) => ipcRenderer.invoke('settings:update', patch)
+      update: (patch) => ipcRenderer.invoke('settings:update', patch),
+      clearSiteData: () => ipcRenderer.invoke('settings:clear-site-data')
     },
     onTheme: (callback) => {
       const handler = (_event, theme) => callback(theme);
@@ -40,6 +83,38 @@ if (isInternalPage) {
       remove: (id) => ipcRenderer.invoke('passwords:remove', id),
       clear: () => ipcRenderer.invoke('passwords:clear'),
       unblock: (origin) => ipcRenderer.invoke('passwords:unblock', origin)
+    }
+  });
+}
+
+/* ============================================================
+   Bridge for a plugin's own pages.
+
+   Deliberately smaller than the browser's own: enough to be a useful page -
+   go somewhere, open a cloud, read the theme, read where the clouds have been -
+   and nothing that touches the profile. No settings, no passwords, no history,
+   no plugin management.
+   ============================================================ */
+
+if (isPluginPage) {
+  contextBridge.exposeInMainWorld('cloudPlugin', {
+    navigate: (input) => ipcRenderer.send('nav:go', input),
+    openTab: (url, background = false) => ipcRenderer.send('tab:new', url, { background }),
+    getState: () => ipcRenderer.invoke('shell:get-state'),
+    timeline: () => ipcRenderer.invoke('timeline:read'),
+    onTheme: (callback) => {
+      const handler = (_event, theme) => callback(theme);
+      ipcRenderer.on('cloud:theme', handler);
+      return () => ipcRenderer.removeListener('cloud:theme', handler);
+    },
+    /*
+     * A knock at the door: something in the browser changed. It carries
+     * nothing - ask for what you want to know.
+     */
+    onChange: (callback) => {
+      const handler = () => callback();
+      ipcRenderer.on('cloud:changed', handler);
+      return () => ipcRenderer.removeListener('cloud:changed', handler);
     }
   });
 }

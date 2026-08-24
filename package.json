@@ -18,7 +18,7 @@
     "icon": "powershell -ExecutionPolicy Bypass -File tools/make-icon.ps1",
     "register": "powershell -ExecutionPolicy Bypass -File tools/register-windows.ps1",
     "unregister": "powershell -ExecutionPolicy Bypass -File tools/register-windows.ps1 -Unregister",
-    "package": "npx --yes @electron/packager . \"Stratus\" --overwrite --out=dist --asar --icon=assets/icon.ico --prune --ignore=\"^/(dist|CloudBrowser-win32-x64|plugins)$\"",
+    "package": "npx --yes @electron/packager . \"Stratus\" --overwrite --out=dist --asar --icon=assets/icon.ico --prune --ignore=\"^/(dist|CloudBrowser-win32-x64)$\"",
     "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\""
   },
   "devDependencies": {

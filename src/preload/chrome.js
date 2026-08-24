@@ -22,6 +22,7 @@ contextBridge.exposeInMainWorld('cloud', {
     move: (id, index) => ipcRenderer.send('tab:move', id, index),
     merge: (ids) => ipcRenderer.send('tab:merge', ids),
     split: (id) => ipcRenderer.send('tab:split', id),
+    paneSizes: (id, sizes) => ipcRenderer.send('tab:pane-sizes', id, sizes),
     setMuted: (id, muted) => ipcRenderer.send('tab:mute', id, muted)
   },
 
@@ -44,7 +45,8 @@ contextBridge.exposeInMainWorld('cloud', {
 
   preview: {
     resolve: (input) => ipcRenderer.invoke('preview:resolve', input),
-    show: (input, rect, viewport) => ipcRenderer.send('preview:show', input, rect, viewport),
+    show: (input, rect, viewport, frame) =>
+      ipcRenderer.send('preview:show', input, rect, viewport, frame),
     hide: () => ipcRenderer.send('preview:hide')
   },
 
@@ -80,6 +82,7 @@ contextBridge.exposeInMainWorld('cloud', {
     focusOmnibox: listen('shell:focus-omnibox'),
     openFind: listen('shell:open-find'),
     savePassword: listen('shell:save-password'),
+    merged: listen('shell:merged'),
     previewTarget: listen('shell:preview-target'),
     previewExpanding: listen('shell:preview-expanding'),
     fullScreen: listen('shell:full-screen')

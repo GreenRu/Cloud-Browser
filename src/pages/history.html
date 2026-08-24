@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta http-equiv="Content-Security-Policy"
-          content="default-src 'none'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:;" />
+          content="default-src 'none'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data: https:;" />
     <title>History</title>
     <link rel="stylesheet" href="./shared.css" />
   </head>
@@ -13,12 +13,24 @@
       <p class="page-sub" id="count">Loading…</p>
 
       <div class="toolbar-row">
-        <input class="field" id="filter" type="text" placeholder="Search history" spellcheck="false" autocomplete="off" />
-        <button class="ghost-btn" id="clear">Clear all</button>
+        <input class="field" id="filter" type="text" placeholder="Search history"
+               spellcheck="false" autocomplete="off" />
+        <select class="field narrow" id="range">
+          <option value="0">All time</option>
+          <option value="3600000">Past hour</option>
+          <option value="86400000">Past day</option>
+          <option value="604800000">Past week</option>
+          <option value="2592000000">Past month</option>
+        </select>
+        <button class="ghost-btn danger" id="clear">Clear all</button>
       </div>
 
       <div id="groups"></div>
     </main>
+    <script src="../shared/theme.js"></script>
+    <script src="../shared/clouds.js"></script>
+    <script src="../shared/stars.js"></script>
+    <script src="../shared/birds.js"></script>
     <script src="./history.js"></script>
   </body>
 </html>

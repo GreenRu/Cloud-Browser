@@ -39,6 +39,10 @@ Rules that follow from that table:
 5. **Kill stray instances before launching.** The single-instance lock silently
    hands the launch to an older process, which has burnt real time here already:
    a stale instance reads stale state and the new code appears not to work.
+   A stray window also *covers* the new one, and an occluded page pauses its CSS
+   animations and throttles its timers - so a timing assertion reads zero and a
+   pending `setTimeout` never fires. Three assertions failed reproducibly this
+   way with nothing wrong in the code.
 6. **Edit with one script, not many calls.** A single Python/`sed` pass over
    several files beats a dozen individual edits.
 7. **Instrument, do not guess.** Two `console.log`s in the main process settled a
@@ -104,9 +108,21 @@ Two constraints came out of building it, both worth remembering:
 > **The chrome renderer cannot draw over the page.** A tab is a
 > `WebContentsView`, a native child stacked above the window's own web
 > contents, so HTML positioned over the page area is invisible behind it.
-> The bubble works around this: its frame is drawn *larger* than the preview
-> view, so the head row and the ring of padding fall outside the view's rect
-> and stay visible. That ring is what reads as the bubble.
+>
+> This is worse than it first looks, and it went unnoticed for a while: the
+> thought bubble's frame is drawn *larger* than the preview view on the theory
+> that the head row and the ring of padding fall outside the view's rect and
+> stay visible - but they fall inside the *page's* rect, which is what actually
+> covers them. Only the tail puffs, deliberately placed out over the sidebar,
+> were ever visible. Nothing in the DOM shows this: every measurement of the
+> frame is correct, and a `capturePage` of the renderer shows it perfectly.
+> A screen capture is the only thing that tells you.
+>
+> Anything the chrome needs to show *over* a page has to be its own view. The
+> bubble's card is now one (`src/pages/bubble.html`), stacked between the page
+> and the preview, with the renderer's own copy kept only as the thing that
+> measures where both go. Order is fixed at creation - re-adding a view later
+> to correct it steals focus.
 
 > **A view takes native keyboard focus, repeatedly.** Showing it, a load
 > committing, and the page's own scripts all grab it, and each grab sends the
@@ -115,6 +131,37 @@ Two constraints came out of building it, both worth remembering:
 > undone. It has to be deferred out of the focus change (0 / 80 / 250 ms), and
 > the renderer must check where focus actually *is* before acting on a blur
 > rather than trusting that it left.
+
+> **A filled animation outranks inline styles and transitions.** `.tab` carries
+> `animation: cloud-in ... both`, and `both` keeps the final keyframe applying
+> for the life of the element - so it silently won over every later attempt to
+> set `transform` or `opacity` on a tab from script. A closing cloud sat at full
+> opacity for its whole three-second "fade" and never moved, while the computed
+> transition duration read back correctly as `3s`. Assert the *value* partway
+> through, never just the declared duration, and set `animation: none` on any
+> element script means to drive.
+
+> **Smart App Control can block `electron.exe` itself, mid-session.** It ran
+> for hours, then started failing with "An Application Control policy has
+> blocked this file" (CodeIntegrity events 3033/3077). The verdict is pinned to
+> that one file instance, not to its contents: copying the same bytes to another
+> path and running them worked immediately. So the fix is to make the binary a
+> fresh file - `npm rebuild electron`, or delete `node_modules/electron` and
+> reinstall - and *not* to turn Smart App Control off, which cannot be turned
+> back on without reinstalling Windows. Check with:
+>
+> ```
+> Get-WinEvent -LogName Microsoft-Windows-CodeIntegrity/Operational -MaxEvents 40 |
+>   Where-Object { $_.Message -match "electron" }
+> ```
+
+> **A suite that builds the shell by hand never boots the app.** Every suite
+> here constructs `BrowserShell` directly, which is what keeps them fast and
+> isolated - and means none of them runs `src/main/index.js`. A missing `let`
+> there passed 28 green assertions and still broke the browser on launch.
+> `npx electron .` for a few seconds, with the output read rather than glanced
+> at, is the cheapest test in the file and catches exactly what the others
+> cannot.
 
 > **Synthetic events do not exercise the real input path.** A dispatched
 > `MouseEvent` skips the pointer path entirely, so a suite can pass green while

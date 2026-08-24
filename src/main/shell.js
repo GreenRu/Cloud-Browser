@@ -4,11 +4,21 @@ const fs = require('fs');
 const path = require('path');
 const { BrowserWindow, Menu, clipboard, shell, screen, nativeTheme } = require('electron');
 const { WebContentsView } = require('electron');
-const { Tab } = require('./tab');
+const { Tab, PAGE_RADIUS } = require('./tab');
 const { normalizeInput, prettifyUrl, resolveLoadTarget } = require('./urls');
 const { PasswordVault } = require('./passwords');
 
 const PARTITION = 'persist:cloud';
+
+/**
+ * The world plugin scripts run in. Isolated from the page's own JavaScript in
+ * both directions: a page cannot reach a plugin, and a plugin cannot be
+ * tampered with by the page it is dressing.
+ */
+const PLUGIN_WORLD = 1000;
+
+/** The seam between two merged panes, and the width of the grip on it. */
+const PANE_GAP = 8;
 
 // Until the renderer measures itself, park the page view below a toolbar-sized
 // strip and to the right of a default sidebar so the first paint is not wrong.
@@ -24,9 +34,17 @@ const LIVE_PAGE_PREVIEW = true;
 /** Matches the .thought-screen radius in the renderer stylesheet. */
 const PREVIEW_RADIUS = 15;
 
+/** And this one the .thought-bubble radius the card is drawn with. */
+const BUBBLE_RADIUS = 22;
+
 // Must match --titlestrip-h and the top stop of the sky gradient in the
 // renderer stylesheet, so the OS-drawn window controls sit flush on the sky.
 const TITLEBAR_HEIGHT = 40;
+/** A titlebar overlay colour has to be a colour, not `rgba(...)` or a name. */
+function hexOnly(value) {
+  return /^#[0-9a-f]{6}$/i.test(String(value || '')) ? value : null;
+}
+
 const THEME_CHROME = {
   day: { color: '#74b1e5', symbol: '#1d3a56' },
   night: { color: '#16243c', symbol: '#c3d5ec' }
@@ -60,7 +78,7 @@ function fitToScreen(saved) {
  * the whole window, with the active tab's WebContentsView layered below it.
  */
 class BrowserShell {
-  constructor(store, vault) {
+  constructor(store, vault, plugins = null) {
     this.store = store;
     this.vault = vault || new PasswordVault();
     this.pendingLogin = null;
@@ -68,11 +86,19 @@ class BrowserShell {
     this.order = [];
     this.activeId = null;
     this.insets = { ...DEFAULT_INSETS };
+    this.gutters = [];
     this.findQuery = '';
-    this.previewView = null;
-    this.previewAttached = false;
-    this.previewUrl = null;
-    this.previewExpanding = false;
+    /** The plugin host, when the browser was started with one. */
+    this.plugins = plugins;
+    /**
+     * One preview per thing that can ask for one: the address bar, and each
+     * pane of a merged cloud. Keyed by the webContents the keyboard belongs to
+     * while its bubble is up, so panes searching side by side never fight over
+     * a single view.
+     */
+    this.previews = new Map();
+    this.frameView = null;
+    this.frameAttached = false;
     this.fullScreen = false;
 
     const bounds = fitToScreen(store.get('window') || {});
@@ -109,16 +135,8 @@ class BrowserShell {
     this.window.once('ready-to-show', () => this.window.show());
     this.window.on('resize', () => this._layout());
     // Full screen means the page, not the page plus furniture.
-    this.window.on('enter-full-screen', () => {
-      this.fullScreen = true;
-      this.send('shell:full-screen', true);
-      this._layout();
-    });
-    this.window.on('leave-full-screen', () => {
-      this.fullScreen = false;
-      this.send('shell:full-screen', false);
-      this._layout();
-    });
+    this.window.on('enter-full-screen', () => this.setFullScreen(true));
+    this.window.on('leave-full-screen', () => this.setFullScreen(false));
     this.window.on('move', () => this._persistBounds());
     this.window.on('resized', () => this._persistBounds());
     // Capture the session while the tabs still exist: by the time 'closed' or
@@ -135,7 +153,12 @@ class BrowserShell {
       if (this.tabs.size === 0) this._restoreSession();
       // Built now, while nobody is typing, so showing it later is only a
       // visibility flip.
-      if (LIVE_PAGE_PREVIEW) this._ensurePreview();
+      if (LIVE_PAGE_PREVIEW) {
+        // Order matters and is fixed here: the card first, the live view over
+        // it. Re-adding a view later to correct the order would steal focus.
+        this._ensureBubbleFrame();
+        this._ensurePreview(this.window.webContents);
+      }
     });
 
     // The chrome UI never navigates itself; outbound links become tabs.
@@ -156,7 +179,10 @@ class BrowserShell {
       targets.forEach((url, i) => this.newTab(url, { background: i > 0 }));
       return;
     }
-    const session = this.store.get('session');
+    // Only if the user wants last time's clouds back; otherwise the home page.
+    const session = this.store.get('restoreSession') === false
+      ? null
+      : this.store.get('session');
     const urls = Array.isArray(session) && session.length
       ? session
       : [this.store.get('homepage')];
@@ -215,19 +241,35 @@ class BrowserShell {
     const boxWidth = Math.max(0, width - left - right);
     const boxHeight = Math.max(0, height - top - bottom);
 
-    // Merged tabs share the page area as equal columns with a gutter between.
+    // Merged tabs share the page area as columns with a gutter between, in
+    // whatever proportions the dividers have been dragged to. Full screen is
+    // the page and nothing else: the panes meet edge to edge, with no seam
+    // between them and no rounding at the corners.
     const views = tab.views;
-    const gap = views.length > 1 ? 8 : 0;
-    const each = Math.floor((boxWidth - gap * (views.length - 1)) / views.length);
+    const gap = views.length > 1 && !this.fullScreen ? PANE_GAP : 0;
+    const usable = Math.max(0, boxWidth - gap * (views.length - 1));
+    const sizes = tab.paneSizes();
+
+    // Where the dividers are, for the renderer to hang a grip on. They are the
+    // one part of the page area the chrome can still draw in.
+    const gutters = [];
+    let x = left;
+
+    const radius = this.fullScreen ? 0 : PAGE_RADIUS;
 
     views.forEach((view, i) => {
-      view.setBounds({
-        x: left + i * (each + gap),
-        y: top,
-        width: i === views.length - 1 ? boxWidth - i * (each + gap) : each,
-        height: boxHeight
-      });
+      const last = i === views.length - 1;
+      const width = last ? left + boxWidth - x : Math.round(usable * sizes[i]);
+      view.setBounds({ x, y: top, width: Math.max(1, width), height: boxHeight });
+      view.setBorderRadius?.(radius);
+      x += width;
+      if (!last && gap > 0) {
+        gutters.push({ x, y: top, width: gap, height: boxHeight });
+        x += gap;
+      }
     });
+
+    this.gutters = gutters;
   }
 
   // --- tabs ----------------------------------------------------------------
@@ -239,10 +281,14 @@ class BrowserShell {
       partition: PARTITION,
       onChange: (t) => this._onTabChanged(t),
       onOpenTab: (u, opts) => this.newTab(u, opts),
-      onContextMenu: (t, params) => this._showPageContextMenu(t, params)
+      onContextMenu: (t, params) => this._showPageContextMenu(t, params),
+      onDressPage: (t, url) => this.applyPlugins(t, url),
+      pluginDirs: this.plugins ? this.plugins.dirs : []
     });
 
     tab.webContents.on('did-finish-load', () => this.autofill(tab));
+    // A page resets its own zoom on every navigation, so it is set again here.
+    tab.webContents.on('did-finish-load', () => this.applyZoom(tab));
 
     tab.webContents.on('found-in-page', (_e, result) => {
       if (tab.id !== this.activeId) return;
@@ -263,6 +309,98 @@ class BrowserShell {
     return tab;
   }
 
+  /**
+   * Hand a freshly loaded page to the plugins that asked for it.
+   *
+   * Stylesheets go in directly. Scripts run in an isolated world, so plugin
+   * code sees the DOM and nothing else: not the page's own JavaScript, not
+   * Node, and not the browser's bridge. A plugin that throws takes only itself
+   * down with it.
+   */
+  applyPlugins(tab, url) {
+    if (!this.plugins || !tab || tab.destroyed) return;
+    const { styles, scripts } = this.plugins.injectionsFor(url);
+    if (!styles.length && !scripts.length) return;
+
+    const wc = tab.webContents;
+    for (const rule of styles) {
+      wc.insertCSS(rule.source).catch(() => {});
+    }
+    for (const rule of scripts) {
+      wc.executeJavaScriptInIsolatedWorld(PLUGIN_WORLD, [{
+          code: `(() => { try {\n${rule.source}\n} catch (err) {` +
+            ` console.error('[plugin ${rule.plugin}]', err); } })();`
+        }])
+        .catch(() => {});
+    }
+  }
+
+  /**
+   * The zoom every page starts at. Applied when a tab is made and again when
+   * the setting changes, so it is one number rather than a per-page habit.
+   */
+  applyZoom(tab) {
+    const zoom = Number(this.store.get('defaultZoom'));
+    if (!Number.isFinite(zoom) || zoom <= 0) return;
+    for (const view of tab.views) {
+      if (!view.webContents.isDestroyed()) view.webContents.setZoomFactor(zoom);
+    }
+  }
+
+  setDefaultZoom(zoom) {
+    const value = Math.min(2, Math.max(0.5, Number(zoom) || 1));
+    this.store.set('defaultZoom', value);
+    for (const tab of this.tabs.values()) {
+      if (!tab.destroyed) this.applyZoom(tab);
+    }
+    return value;
+  }
+
+  /**
+   * Where every cloud has been, as trees.
+   *
+   * `exclude` leaves out the page doing the asking - a timeline looking at
+   * itself is not what anyone wants to see.
+   */
+  trails(exclude = null) {
+    const found = exclude ? this._ownerOf(exclude) : null;
+    const skip = found ? found.tab.id : null;
+
+    return {
+      activeId: this.activeId === skip ? null : this.activeId,
+      clouds: this.order
+        .map((id) => this.tabs.get(id))
+        .filter((tab) => tab && !tab.destroyed && tab.id !== skip)
+        .map((tab) => ({
+          id: tab.id,
+          title: tab.title,
+          url: prettifyUrl(tab.url),
+          at: tab.trailAt,
+          nodes: tab.trail.map((n) => ({ ...n, url: prettifyUrl(n.url) }))
+        }))
+        .filter((cloud) => cloud.nodes.length > 0)
+    };
+  }
+
+  /** Search keywords: the user's own, with any a plugin contributes behind them. */
+  shortcuts() {
+    return { ...(this.plugins ? this.plugins.shortcuts() : {}), ...this.store.get('shortcuts') };
+  }
+
+  /**
+   * Tell a plugin's scripts that one of its commands was chosen. It arrives in
+   * the isolated world as an event on `window`, which is the only channel a
+   * plugin has.
+   */
+  runPluginCommand(pluginId, commandId) {
+    const tab = this.activeTab;
+    if (!tab || tab.destroyed) return;
+    const detail = JSON.stringify({ plugin: pluginId, command: commandId });
+    tab.webContents.executeJavaScriptInIsolatedWorld(PLUGIN_WORLD, [{
+      code: `window.dispatchEvent(new CustomEvent('stratus:command', { detail: ${detail} }));`
+    }]).catch(() => {});
+  }
+
   activate(id) {
     const tab = this.tabs.get(id);
     if (!tab || tab.destroyed) return;
@@ -275,11 +413,13 @@ class BrowserShell {
     this.hidePreview();
     this.activeId = id;
     for (const view of tab.views) this.window.contentView.addChildView(view);
-    // The tab view now sits above the preview; lift the preview back on top.
-    // Safe here because switching tabs is never mid-keystroke.
-    if (this.previewView && !this.previewView.webContents.isDestroyed()) {
-      this.window.contentView.removeChildView(this.previewView);
-      this.window.contentView.addChildView(this.previewView);
+    // The tab view now sits above both of ours; lift them back, frame first so
+    // the preview ends up on top of it. Safe here because switching tabs is
+    // never mid-keystroke.
+    for (const layer of [this.frameView, ...this.previewViews]) {
+      if (!layer || layer.webContents.isDestroyed()) continue;
+      this.window.contentView.removeChildView(layer);
+      this.window.contentView.addChildView(layer);
     }
     this._layout();
     tab.webContents.focus();
@@ -289,6 +429,8 @@ class BrowserShell {
   closeTab(id) {
     const tab = this.tabs.get(id);
     if (!tab) return;
+    // Its panes are going; so is anything they were previewing.
+    this.hidePreview();
 
     const index = this.order.indexOf(id);
     this.order.splice(index, 1);
@@ -346,6 +488,9 @@ class BrowserShell {
       if (at >= 0) this.order.splice(at, 1);
     }
 
+    // Leaving the strip because they joined something is not the same as being
+    // closed, and must not look like it. Said before the state that drops them.
+    this.send('shell:merged', { host: host.id, ids: rest.map((t) => t.id) });
     this.activate(host.id);
   }
 
@@ -353,12 +498,22 @@ class BrowserShell {
    * Undo a merge: every adopted pane becomes its own entry again, placed
    * directly after the host so the strip reads in the order they were shown.
    */
+  /** Let go of the previews owned by pages that are no longer on screen. */
+  _prunePreviews() {
+    for (const owner of [...this.previews.keys()]) {
+      if (owner === this.window.webContents) continue;
+      if (owner.isDestroyed() || !this._ownerOf(owner)) this._dropPreview(owner);
+    }
+  }
+
   splitTab(id) {
     const host = this.tabs.get(id);
     if (!host || host.destroyed || host.paneCount < 2) return;
 
     const freed = host.release();
     const at = this.order.indexOf(id);
+
+    this._afterSplit();
 
     freed.forEach((pane, i) => {
       this.tabs.set(pane.id, pane);
@@ -372,6 +527,25 @@ class BrowserShell {
     });
 
     this._layout();
+    this._broadcast();
+  }
+
+  // Splitting a merged cloud apart moves its panes; anything they were
+  // previewing has to move with them, and the simplest true answer is to put
+  // the previews away and let them be asked for again.
+  _afterSplit() {
+    this.hidePreview();
+    this._prunePreviews();
+  }
+
+  /** Drag a divider: the panes trade width and the views follow at once. */
+  setPaneSizes(id, sizes) {
+    const tab = this.tabs.get(id);
+    if (!tab || tab.destroyed || tab.paneCount < 2) return;
+    if (!tab.setPaneSizes(sizes)) return;
+    this._layout();
+    // The seams have moved, and the grips on them are drawn by the renderer.
+    // Safe mid-drag: the strip leaves the grips alone while one is being held.
     this._broadcast();
   }
 
@@ -410,10 +584,113 @@ class BrowserShell {
    * receive autofill, because the user has not chosen to visit this page yet -
    * they are still typing its address.
    */
-  _ensurePreview() {
-    if (this.previewView && !this.previewView.webContents.isDestroyed()) return this.previewView;
+  /**
+   * The card drawn around the preview.
+   *
+   * The chrome renderer draws one too, and that DOM is what reports where the
+   * live view should go - but the renderer sits *below* the page, so anything
+   * it draws inside the stage is hidden the moment a tab is open. This view is
+   * stacked above the page and below the preview, so the head row and the ring
+   * of padding around the view are the parts you actually see.
+   *
+   * Pages that have a bubble of their own - the new tab page's search bar -
+   * draw their own frame and never ask for this one.
+   */
+  _ensureBubbleFrame() {
+    if (this.frameView && !this.frameView.webContents.isDestroyed()) return this.frameView;
 
-    this.previewView = new WebContentsView({
+    this.frameView = new WebContentsView({
+      webPreferences: {
+        preload: path.join(__dirname, '..', 'preload', 'bubble.js'),
+        contextIsolation: true,
+        nodeIntegration: false,
+        sandbox: true
+      }
+    });
+    // Transparent outside the card, so the rounded corners show the page
+    // behind them rather than a square of colour.
+    this.frameView.setBackgroundColor('#00000000');
+    this.frameView.setBorderRadius?.(BUBBLE_RADIUS);
+
+    const wc = this.frameView.webContents;
+    wc.setWindowOpenHandler(() => ({ action: 'deny' }));
+    // It shows one line of text. It never navigates anywhere.
+    wc.on('will-navigate', (event) => event.preventDefault());
+
+    // Same rule as the preview: it must never hold the keyboard.
+    wc.on('focus', () => {
+      const back = () => {
+        // The card is only ever the address bar's, so the keyboard goes back
+        // to the chrome.
+        if (!this.window.isDestroyed()) this.window.webContents.focus();
+      };
+      setTimeout(back, 0);
+      setTimeout(back, 80);
+    });
+
+    wc.loadFile(path.join(__dirname, '..', 'pages', 'bubble.html')).catch(() => {});
+
+    this.frameView.setVisible(false);
+    this.window.contentView.addChildView(this.frameView);
+    return this.frameView;
+  }
+
+  /** Put the frame away, leaving the view it framed alone. */
+  hideBubbleFrame() {
+    if (!this.frameAttached || !this.frameView) return;
+    this.frameView.setVisible(false);
+    this.frameAttached = false;
+  }
+
+  /** The chrome's own preview, for the callers that only ever mean that one. */
+  get previewView() {
+    const entry = this.previews.get(this.window.webContents);
+    return entry ? entry.view : null;
+  }
+
+  get previewUrl() {
+    const entry = this.previews.get(this.window.webContents);
+    return entry ? entry.url : null;
+  }
+
+  get previewAttached() {
+    const entry = this.previews.get(this.window.webContents);
+    return Boolean(entry && entry.attached);
+  }
+
+  get previewExpanding() {
+    return [...this.previews.values()].some((e) => e.expanding);
+  }
+
+  previewFor(owner) {
+    return this.previews.get(owner) || null;
+  }
+
+  previewUrlFor(owner) {
+    const entry = this.previews.get(owner);
+    return entry ? entry.url : null;
+  }
+
+  previewAttachedFor(owner) {
+    const entry = this.previews.get(owner);
+    return Boolean(entry && entry.attached);
+  }
+
+  previewBoundsFor(owner) {
+    const entry = this.previews.get(owner);
+    return entry ? entry.view.getBounds() : null;
+  }
+
+  /** Every preview view, oldest first - the order they are stacked in. */
+  get previewViews() {
+    return [...this.previews.values()].map((e) => e.view);
+  }
+
+  _ensurePreview(owner) {
+    const existing = this.previews.get(owner);
+    if (existing && !existing.view.webContents.isDestroyed()) return existing;
+
+    const view = new WebContentsView({
       webPreferences: {
         partition: PARTITION,
         preload: path.join(__dirname, '..', 'preload', 'preview.js'),
@@ -424,11 +701,11 @@ class BrowserShell {
         backgroundThrottling: false
       }
     });
-    this.previewView.setBackgroundColor('#ffffff');
-    this.previewView.setBorderRadius?.(PREVIEW_RADIUS);
+    view.setBackgroundColor('#ffffff');
+    view.setBorderRadius?.(PREVIEW_RADIUS);
 
     // A preview must never become a window or steal the session.
-    this.previewView.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+    view.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
 
     /*
      * The preview must never hold the keyboard. It can take focus from several
@@ -440,10 +717,13 @@ class BrowserShell {
      */
     const returnFocus = () => {
       if (this.window.isDestroyed() || this.window.webContents.isDestroyed()) return;
-      this.window.webContents.focus();
+      // Back to whoever is being typed into - this preview's own owner, which
+      // is the address bar or one particular pane's search bar.
+      if (!owner.isDestroyed()) owner.focus();
+      else this.window.webContents.focus();
     };
 
-    this.previewView.webContents.on('focus', () => {
+    view.webContents.on('focus', () => {
       // Returning focus from inside the focus event is re-entrant and gets
       // undone, so hand it back once the current focus change has finished,
       // and again shortly after in case the page grabs it as it settles.
@@ -455,30 +735,97 @@ class BrowserShell {
     // Attached once, for the window's lifetime, and hidden until wanted.
     // Adding a child view moves native focus to it, and doing that mid-word
     // sends the next keystrokes to the preview instead of the address bar.
-    this.previewView.setVisible(false);
-    this.window.contentView.addChildView(this.previewView);
-    this.window.webContents.focus();
-    return this.previewView;
+    view.setVisible(false);
+    this.window.contentView.addChildView(view);
+    returnFocus();
+
+    const entry = { view, owner, url: null, attached: false, expanding: false };
+    this.previews.set(owner, entry);
+    return entry;
   }
 
-  showPreview(input, rect, viewport) {
-    if (this.window.isDestroyed() || !rect || !viewport) return;
+  /**
+   * The tab a webContents belongs to, and the pane within it. For an unmerged
+   * cloud those are the same object; for a merged one the pane is the tab whose
+   * page it actually is, which is what a preview opened from it should replace.
+   */
+  _ownerOf(contents) {
+    for (const tab of this.tabs.values()) {
+      for (const pane of [tab, ...tab.extraPanes]) {
+        if (pane.webContents === contents) return { tab, pane };
+      }
+    }
+    return null;
+  }
 
-    const url = normalizeInput(input, this.store.get('searchEngine'), this.store.get('shortcuts'));
-    if (!url) return this.hidePreview();
+  /**
+   * A preview asked for by one of the browser's own pages. The page measures in
+   * its own coordinates and knows nothing of where it sits in the window, so
+   * the offset comes from the view the message arrived from - never from
+   * anything the page says about itself.
+   */
+  showPreviewInPage(sender, input, rect, viewport) {
+    const found = this._ownerOf(sender);
+    // Only a pane of the cloud being looked at; a background page must not put
+    // a view over the one in front.
+    if (!found || found.tab.id !== this.activeId || !rect) return;
+
+    const at = found.pane.view.getBounds();
+    this.showPreview(
+      input,
+      { x: rect.x + at.x, y: rect.y + at.y, width: rect.width, height: rect.height },
+      viewport,
+      sender
+    );
+  }
+
+  /**
+   * `owner` is the webContents the keyboard belongs to while the bubble is up:
+   * the chrome for the address bar, or a page's own view when the page has a
+   * search bar of its own. The preview must never keep focus it is handed.
+   */
+  showPreview(input, rect, viewport, owner = this.window.webContents, frame = null) {
+    if (this.window.isDestroyed() || !rect || !viewport || !owner || owner.isDestroyed()) return;
+
+    const url = normalizeInput(input, this.store.get('searchEngine'), this.shortcuts());
+    if (!url) return this.hidePreviewFor(owner);
 
     this.send('shell:preview-target', { url: prettifyUrl(url), live: LIVE_PAGE_PREVIEW });
 
     // No view, no navigation, no request: the bubble is destination-only.
     if (!LIVE_PAGE_PREVIEW) return;
 
-    const view = this._ensurePreview();
-    if (!this.previewAttached) {
+    // The card, for whoever has not drawn their own.
+    if (frame) {
+      const card = this._ensureBubbleFrame();
+      card.setBounds({
+        x: Math.round(frame.x),
+        y: Math.round(frame.y),
+        width: Math.max(1, Math.round(frame.width)),
+        height: Math.max(1, Math.round(frame.height))
+      });
+      card.webContents.send('bubble:frame', {
+        url: prettifyUrl(url),
+        // The card is styled from the two built-in palettes, so it is told
+        // which one a custom theme is built on.
+        theme: this.themeState().base
+      });
+      if (!this.frameAttached) {
+        card.setVisible(true);
+        this.frameAttached = true;
+      }
+    } else {
+      this.hideBubbleFrame();
+    }
+
+    const entry = this._ensurePreview(owner);
+    const view = entry.view;
+    if (!entry.attached) {
       // Only a visibility flip here: adding or re-adding a view steals native
       // focus, and this runs while the user is typing.
       view.setBorderRadius?.(PREVIEW_RADIUS);
       view.setVisible(true);
-      this.previewAttached = true;
+      entry.attached = true;
     }
 
     view.setBounds({
@@ -490,11 +837,24 @@ class BrowserShell {
 
     // Every keystroke asks for a load, so drop the one still in flight rather
     // than letting a queue of half-finished pages pile up.
-    if (this.previewUrl !== url) {
-      this.previewUrl = url;
+    if (entry.url !== url) {
+      entry.url = url;
       view.webContents.stop();
       view.webContents.loadURL(resolveLoadTarget(url)).catch(() => {});
     }
+  }
+
+  /**
+   * Full screen hands the whole window to the pages: no furniture around them,
+   * no seam between them, and no rounded corners.
+   */
+  setFullScreen(on) {
+    this.fullScreen = Boolean(on);
+    this.send('shell:full-screen', this.fullScreen);
+    this._layout();
+    // The seams have gone or come back, and the grips on them are the
+    // renderer's to draw.
+    this._broadcast();
   }
 
   /** The rect the page view occupies - what the bubble expands into. */
@@ -513,81 +873,163 @@ class BrowserShell {
    * A press on the preview opens it: the bubble grows into the page area, then
    * the real tab takes over at the same size, so the swap is invisible.
    */
+  /** The address bar's preview, for the chrome's own callers. */
   activatePreview() {
-    if (!this.previewAttached || !this.previewView || !this.previewUrl) return;
-    if (this.previewExpanding) return;
+    this.activatePreviewFor(this.window.webContents);
+  }
 
-    this.previewExpanding = true;
-    const url = this.previewUrl;
-    const from = this.previewView.getBounds();
-    const to = this._stageBounds();
+  /**
+   * Grow a preview into the place it belongs and hand the page over.
+   *
+   * "Where it belongs" is the pane it was opened from, not the whole page area:
+   * a search made in the middle of three panes opens there, leaving the other
+   * two where they were.
+   */
+  activatePreviewFor(owner) {
+    const entry = this.previews.get(owner);
+    if (!entry || !entry.attached || !entry.url || entry.expanding) return;
+
+    entry.expanding = true;
+    // The card would only be in the way of what it framed.
+    this.hideBubbleFrame();
+
+    const url = entry.url;
+    const from = entry.view.getBounds();
+    const found = owner === this.window.webContents ? null : this._ownerOf(owner);
+    const to = found ? found.pane.view.getBounds() : this._stageBounds();
     const started = Date.now();
-    const DURATION = 240;
 
     this.send('shell:preview-expanding');
 
+    /*
+     * Every frame of this resizes a live page, which is not cheap, so the
+     * animation is given time rather than rushed: a longer run means smaller
+     * steps, and small steps are what reads as smooth. The curve eases in as
+     * well as out, so it starts from rest instead of snapping away from the
+     * bubble.
+     *
+     * Timed off the clock rather than off the tick, so a late tick shows up as
+     * a skipped frame rather than as a slower animation - and asked for more
+     * often than 60Hz, so a tick landing late still leaves the next one close
+     * to its vsync.
+     */
+    const DURATION = 380;
+    // A pane keeps its rounded corners; only the whole page area squares off.
+    const endRadius = found ? PREVIEW_RADIUS : 0;
+    let lastRadius = -1;
+
     const step = () => {
-      if (!this.previewAttached || !this.previewView || this.window.isDestroyed()) {
-        this.previewExpanding = false;
+      if (!entry.attached || entry.view.webContents.isDestroyed() || this.window.isDestroyed()) {
+        entry.expanding = false;
         return;
       }
       const t = Math.min(1, (Date.now() - started) / DURATION);
-      const eased = 1 - Math.pow(1 - t, 3);
+      const eased = t < 0.5
+        ? 4 * t * t * t
+        : 1 - Math.pow(-2 * t + 2, 3) / 2;
       const lerp = (a, b) => Math.round(a + (b - a) * eased);
-      this.previewView.setBounds({
+      entry.view.setBounds({
         x: lerp(from.x, to.x),
         y: lerp(from.y, to.y),
         width: lerp(from.width, to.width),
         height: lerp(from.height, to.height)
       });
-      this.previewView.setBorderRadius?.(Math.round(PREVIEW_RADIUS * (1 - eased)));
 
-      if (t < 1) return setTimeout(step, 16);
-      this._commitPreview(url);
+      // Only a handful of distinct values over the whole run; setting the same
+      // one again costs a native call for nothing.
+      const radius = Math.round(PREVIEW_RADIUS + (endRadius - PREVIEW_RADIUS) * eased);
+      if (radius !== lastRadius) {
+        lastRadius = radius;
+        entry.view.setBorderRadius?.(radius);
+      }
+
+      if (t < 1) return setTimeout(step, 8);
+      this._commitPreview(entry, url);
     };
 
     step();
   }
 
-  /** Hand the previewed page over to the real tab and drop the preview. */
-  _commitPreview(url) {
-    const tab = this.activeTab;
-    if (!tab) {
+  /** Hand the previewed page over to the pane it was opened from. */
+  _commitPreview(entry, url) {
+    const found = entry.owner === this.window.webContents ? null : this._ownerOf(entry.owner);
+    const target = found ? found.pane : this.activeTab;
+
+    if (!target) {
       this.newTab(url);
-      this.previewExpanding = false;
-      this.hidePreview();
+      entry.expanding = false;
+      this.hidePreviewFor(entry.owner);
       return;
     }
 
-    tab.loadURL(url);
+    target.loadURL(url);
     const finish = () => {
-      this.previewExpanding = false;
-      this.hidePreview();
+      entry.expanding = false;
+      this.hidePreviewFor(entry.owner);
     };
-    tab.webContents.once('did-stop-loading', finish);
-    // The tab may never settle; do not leave the preview parked over it.
+    target.webContents.once('did-stop-loading', finish);
+    // The page may never settle; do not leave the preview parked over it.
     setTimeout(finish, 4000);
   }
 
-  hidePreview() {
-    if (!this.previewAttached || !this.previewView) return;
-    if (!this.previewView.webContents.isDestroyed() && !this.window.isDestroyed()) {
-      this.previewView.webContents.stop();
-      this.previewView.setVisible(false);
+  /** Put away the preview belonging to one owner. */
+  hidePreviewFor(owner) {
+    // The window may be on its way out, in which case reading its web contents
+    // throws rather than handing back something already destroyed.
+    if (!this.window.isDestroyed() && owner === this.window.webContents) {
+      this.hideBubbleFrame();
     }
-    this.previewAttached = false;
-    this.previewUrl = null;
+    const entry = this.previews.get(owner);
+    if (!entry || !entry.attached) return;
+    if (!entry.view.webContents.isDestroyed() && !this.window.isDestroyed()) {
+      entry.view.webContents.stop();
+      entry.view.setVisible(false);
+    }
+    entry.attached = false;
+    entry.url = null;
+  }
+
+  /** Put every preview away - switching clouds, or closing one. */
+  hidePreview() {
+    this.hideBubbleFrame();
+    for (const owner of this.previews.keys()) this.hidePreviewFor(owner);
+  }
+
+  /** Forget a preview entirely, once whoever owned it has gone. */
+  _dropPreview(owner) {
+    const entry = this.previews.get(owner);
+    if (!entry) return;
+    this.previews.delete(owner);
+    if (!entry.view.webContents.isDestroyed()) {
+      if (!this.window.isDestroyed()) {
+        try {
+          this.window.contentView.removeChildView(entry.view);
+        } catch {
+          // Already detached.
+        }
+      }
+      entry.view.webContents.close();
+    }
   }
 
   destroyPreview() {
     this.hidePreview();
-    if (this.previewView && !this.previewView.webContents.isDestroyed()) {
+    for (const owner of [...this.previews.keys()]) this._dropPreview(owner);
+
+    if (this.frameView && !this.frameView.webContents.isDestroyed()) {
       // This also runs from 'closed', by which point the window and its
-      // contentView are already gone.
-      if (!this.window.isDestroyed()) this.window.contentView.removeChildView(this.previewView);
-      this.previewView.webContents.close();
+      // contentView are already gone - reaching for them then throws rather
+      // than handing back something dead.
+      if (!this.window.isDestroyed()) {
+        try {
+          this.window.contentView.removeChildView(this.frameView);
+        } catch {
+          // Already detached.
+        }
+      }
+      this.frameView.webContents.close();
     }
-    this.previewView = null;
+    this.frameView = null;
   }
 
   // --- saved logins --------------------------------------------------------
@@ -647,17 +1089,33 @@ class BrowserShell {
 
   // --- navigation ----------------------------------------------------------
 
-  navigate(input) {
-    const url = normalizeInput(input, this.store.get('searchEngine'), this.store.get('shortcuts'));
+  /**
+   * The page a request from `contents` should act on: the pane it came from, or
+   * nothing when it came from the chrome. A merged cloud shows several pages at
+   * once, and a link followed in the middle one belongs in the middle one.
+   */
+  paneFor(contents) {
+    const found = contents ? this._ownerOf(contents) : null;
+    return found ? found.pane : null;
+  }
+
+  /**
+   * Go somewhere. `from` is whoever asked - a pane of a merged cloud loads it
+   * itself, while the address bar drives the cloud as a whole.
+   */
+  navigate(input, from = null) {
+    const url = normalizeInput(input, this.store.get('searchEngine'), this.shortcuts());
     if (!url) return;
-    const tab = this.activeTab;
+
+    const tab = this.paneFor(from) || this.activeTab;
     if (!tab) {
       this.newTab(url);
-    } else if (tab.url !== url) {
-      tab.loadURL(url);
-    } else {
-      tab.reload();
+      return;
     }
+
+    if (tab.url !== url) tab.loadURL(url);
+    else tab.reload();
+
     // Hand focus back to the page, the way every browser does after you commit
     // something in the address bar.
     tab.webContents.focus();
@@ -702,19 +1160,43 @@ class BrowserShell {
 
   getState() {
     const active = this.activeTab;
+    const theme = this.themeState();
     return {
       tabs: this.order.map((id) => this.tabs.get(id)).filter(Boolean).map((t) => t.serialize()),
       activeId: this.activeId,
-      theme: this.store.get('theme'),
+      theme: theme.theme,
+      themeBase: theme.base,
+      themeVars: theme.variables,
+      pageThemeVars: theme.pageVariables,
       sidebarWidth: this.store.get('sidebarWidth'),
       showFullUrl: this.store.get('showFullUrl') !== false,
       bookmarks: this.store.get('bookmarks'),
-      bookmarked: active ? this.store.isBookmarked(active.url) : false
+      bookmarked: active ? this.store.isBookmarked(active.url) : false,
+      gutters: this.gutters,
+      pluginToolbar: this.plugins ? this.plugins.toolbar() : []
     };
+  }
+
+  /**
+   * Tell the pages that something changed - and only that.
+   *
+   * The chrome is handed the whole state because it draws it. A page gets a
+   * knock at the door with nothing in it: anything that wants to know more asks
+   * for exactly what it is allowed to have. Nothing about the other clouds
+   * leaks into a page that never asked.
+   */
+  _nudgePages() {
+    for (const tab of this.tabs.values()) {
+      if (tab.destroyed) continue;
+      for (const view of tab.views) {
+        if (!view.webContents.isDestroyed()) view.webContents.send('cloud:changed');
+      }
+    }
   }
 
   _broadcast() {
     this.send('shell:state', this.getState());
+    this._nudgePages();
   }
 
   send(channel, payload) {
@@ -727,18 +1209,70 @@ class BrowserShell {
     }
   }
 
+  /**
+   * What the theme actually is, once a plugin's has been resolved: which of the
+   * two built-in palettes it is built on, the variables laid over that, and
+   * whether websites should be asked for their dark clothes.
+   *
+   * A theme that is neither built in nor offered by a live plugin falls back to
+   * day, so switching a theme plugin off cannot leave the browser unreadable.
+   */
+  themeState() {
+    const theme = this.store.get('theme');
+    if (theme === 'day' || theme === 'night') {
+      return { theme, base: theme, dark: theme === 'night', variables: {}, pageVariables: {} };
+    }
+
+    const custom = this.plugins ? this.plugins.themeVars(theme) : null;
+    if (!custom) {
+      return { theme: 'day', base: 'day', dark: false, variables: {}, pageVariables: {} };
+    }
+
+    return {
+      theme,
+      base: custom.dark ? 'night' : 'day',
+      dark: custom.dark,
+      variables: custom.variables,
+      pageVariables: custom.pageVariables
+    };
+  }
+
   setTheme(theme) {
     this.store.set('theme', theme);
-    const chrome = THEME_CHROME[theme] || THEME_CHROME.day;
+    const state = this.themeState();
+    // The window controls are drawn by the system, so they need a colour rather
+    // than a variable: take the theme's own sky where it gives one.
+    const base = THEME_CHROME[state.base] || THEME_CHROME.day;
+    const chrome = {
+      color: hexOnly(state.variables['--sky-top']) || base.color,
+      symbol: hexOnly(state.variables['--text-on-sky']) || base.symbol
+    };
 
     // Ordinary websites honour prefers-color-scheme, so the whole browser --
     // chrome, built-in pages and the web itself -- switches together.
-    nativeTheme.themeSource = theme === 'night' ? 'dark' : 'light';
+    nativeTheme.themeSource = state.dark ? 'dark' : 'light';
 
     // Built-in pages read the theme once at load; tell the open ones directly
-    // so a toggle takes effect without a reload.
+    // so a toggle takes effect without a reload. Every pane, not just every
+    // entry in the strip: a merged cloud shows several pages at once, and they
+    // all have to change together.
+    const forPages = {
+      theme: state.theme,
+      base: state.base,
+      variables: state.pageVariables
+    };
     for (const tab of this.tabs.values()) {
-      if (!tab.destroyed) tab.webContents.send('cloud:theme', theme);
+      if (tab.destroyed) continue;
+      for (const view of tab.views) {
+        if (!view.webContents.isDestroyed()) view.webContents.send('cloud:theme', forPages);
+      }
+    }
+    // Including the card around the preview, if one is up.
+    if (this.frameAttached && this.frameView && !this.frameView.webContents.isDestroyed()) {
+      this.frameView.webContents.send('bubble:frame', {
+        url: prettifyUrl(this.previewUrl || ''),
+        theme: state.base
+      });
     }
     try {
       this.window.setTitleBarOverlay({ color: chrome.color, symbolColor: chrome.symbol, height: TITLEBAR_HEIGHT });
@@ -790,7 +1324,7 @@ class BrowserShell {
         {
           label: `Search for "${preview}"`,
           click: () =>
-            this.newTab(normalizeInput(selectionText, this.store.get('searchEngine'), this.store.get('shortcuts')))
+            this.newTab(normalizeInput(selectionText, this.store.get('searchEngine'), this.shortcuts()))
         },
         { type: 'separator' }
       );

@@ -10,6 +10,22 @@ const SEARCH_ENGINES = {
   bing: { name: 'Bing', query: 'https://www.bing.com/search?q=%s' }
 };
 
+/**
+ * Pages a plugin has claimed, kept apart from the built-in ones so reloading
+ * plugins cannot lose or overwrite them. A plugin may only claim aliases under
+ * its own name, which the plugin host enforces when it reads the manifest.
+ */
+let PLUGIN_PAGES = {};
+
+function setPluginPages(pages) {
+  PLUGIN_PAGES = pages && typeof pages === 'object' ? { ...pages } : {};
+}
+
+/** Every alias the browser answers to, built-in and plugin alike. */
+function internalPages() {
+  return { ...PLUGIN_PAGES, ...INTERNAL_PAGES };
+}
+
 const INTERNAL_PAGES = {
   'stratus://newtab': path.join(__dirname, '..', 'pages', 'newtab.html'),
   'stratus://history': path.join(__dirname, '..', 'pages', 'history.html'),
@@ -63,7 +79,7 @@ function normalizeInput(input, engineKey = 'google', shortcuts = DEFAULT_SHORTCU
   const text = String(input || '').trim();
   if (!text) return null;
 
-  if (INTERNAL_PAGES[text]) return text;
+  if (internalPages()[text]) return text;
   if (HAS_SCHEME.test(text)) return text;
   if (/^(about|data|blob|mailto|file):/i.test(text)) return text;
 
@@ -82,13 +98,13 @@ function normalizeInput(input, engineKey = 'google', shortcuts = DEFAULT_SHORTCU
 
 /** Map a `stratus://` alias to the packaged HTML file that implements it. */
 function resolveLoadTarget(url) {
-  const file = INTERNAL_PAGES[url];
+  const file = internalPages()[url];
   return file ? pathToFileURL(file).toString() : url;
 }
 
 /** Inverse of resolveLoadTarget, so the URL bar shows `stratus://newtab`. */
 function prettifyUrl(url) {
-  for (const [alias, file] of Object.entries(INTERNAL_PAGES)) {
+  for (const [alias, file] of Object.entries(internalPages())) {
     if (url === pathToFileURL(file).toString()) return alias;
   }
   return url;
@@ -149,6 +165,8 @@ module.exports = {
   expandShortcut,
   normalizeInput,
   resolveLoadTarget,
+  setPluginPages,
+  internalPages,
   prettifyUrl,
   hostLabel
 };

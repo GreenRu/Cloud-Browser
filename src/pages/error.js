@@ -34,12 +34,12 @@ if (bridge) {
   bridge
     .getState()
     .then((state) => {
-      document.documentElement.dataset.theme = state.theme || 'day';
+      window.SkyTheme.apply({ base: state.themeBase, variables: state.pageThemeVars });
     })
     .catch(() => {});
 }
 
 // Follow the browser theme while the page is open, not just at load.
 bridge?.onTheme?.((theme) => {
-  document.documentElement.dataset.theme = theme;
+  window.SkyTheme.apply(theme);
 });

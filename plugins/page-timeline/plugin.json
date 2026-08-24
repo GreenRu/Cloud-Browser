@@ -1,0 +1,29 @@
+{
+  "id": "page-timeline",
+  "name": "Page Timeline",
+  "version": "1.0.0",
+  "description": "A branching map of where each cloud has been, including the paths you turned back from.",
+  "author": "Stratus",
+  "pages": {
+    "stratus://page-timeline": "timeline.html"
+  },
+  "toolbar": [
+    {
+      "id": "open",
+      "label": "Page timeline",
+      "after": "back",
+      "opens": "stratus://page-timeline",
+      "icon": {
+        "paths": [
+          "M5 12h4",
+          "M13 12h6",
+          "M9 12c0-4 1-6 4-6",
+          "M9 12c0 4 1 6 4 6",
+          "M17 6h2",
+          "M17 18h2"
+        ],
+        "circles": [[4, 12, 1.6], [11, 6, 1.4], [11, 18, 1.4], [20, 12, 1.4]]
+      }
+    }
+  ]
+}

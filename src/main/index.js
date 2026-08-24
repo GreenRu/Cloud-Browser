@@ -24,8 +24,11 @@ const path = require('path');
 const { Store } = require('./store');
 const { BrowserShell, PARTITION } = require('./shell');
 const { PasswordVault } = require('./passwords');
-const { DEFAULT_SHORTCUTS, SEARCH_ENGINES, normalizeInput, prettifyUrl, targetsFromArgv } = require('./urls');
+const { DEFAULT_SHORTCUTS, SEARCH_ENGINES, normalizeInput, prettifyUrl, targetsFromArgv,
+  setPluginPages } = require('./urls');
 const { buildAppMenu, popupToolsMenu } = require('./menu');
+const { registerSky } = require('./sky');
+const { PluginHost } = require('./plugins');
 
 /*
  * The app's name decides where its profile lives, so it has to be set before
@@ -65,6 +68,7 @@ migrateProfile();
 const shells = [];
 let store;
 let vault;
+let plugins;
 
 /** Permissions we grant silently. Everything else is denied until there is UI to ask. */
 const AUTO_GRANTED = new Set(['fullscreen', 'clipboard-sanitized-write', 'pointerLock']);
@@ -112,14 +116,26 @@ function registerIpc() {
   ipcMain.on('tab:close', withShell((s, id) => s.closeTab(id)));
   ipcMain.on('tab:activate', withShell((s, id) => s.activate(id)));
   ipcMain.on('tab:move', withShell((s, id, index) => s.moveTab(id, index)));
+  ipcMain.on('tab:pane-sizes', withShell((s, id, sizes) => s.setPaneSizes(id, sizes)));
   ipcMain.on('tab:split', withShell((s, id) => s.splitTab(id)));
   ipcMain.on('tab:merge', withShell((s, ids) => s.mergeTabs(ids)));
   ipcMain.on('tab:mute', withShell((s, id, muted) => s.tabs.get(id)?.setMuted(muted)));
 
-  ipcMain.on('nav:go', withShell((s, input) => s.navigate(input)));
+  /*
+   * A merged cloud shows several pages side by side, and a request from one of
+   * them belongs to that one. The sender says which: a pane acts on itself, and
+   * the chrome - whose toolbar drives the cloud as a whole - acts on the tab in
+   * front. Never on what the message claims about itself.
+   */
+  const senderTab = (s, event) => s.paneFor(event.sender) || s.activeTab;
+
+  ipcMain.on('nav:go', (event, input) => currentShell()?.navigate(input, event.sender));
   ipcMain.on('nav:back', withShell((s) => s.activeTab?.goBack()));
   ipcMain.on('nav:forward', withShell((s) => s.activeTab?.goForward()));
-  ipcMain.on('nav:reload', withShell((s, hard) => s.activeTab?.reload(Boolean(hard))));
+  ipcMain.on('nav:reload', (event, hard) => {
+    const s = currentShell();
+    if (s) senderTab(s, event)?.reload(Boolean(hard));
+  });
   ipcMain.on('nav:stop', withShell((s) => s.activeTab?.stop()));
   ipcMain.on('nav:home', withShell((s) => s.activeTab?.loadURL(s.store.get('homepage'))));
 
@@ -136,15 +152,34 @@ function registerIpc() {
     return url ? prettifyUrl(url) : null;
   });
 
-  ipcMain.on('preview:show', withShell((s, input, rect, viewport) => s.showPreview(input, rect, viewport)));
-  ipcMain.on('preview:hide', withShell((s) => s.hidePreview()));
+  ipcMain.on('preview:show', withShell((s, input, rect, viewport, frame) =>
+    s.showPreview(input, rect, viewport, s.window.webContents, frame)));
+  // Whoever asked for it is whoever can put it away - the address bar closes
+  // the address bar's, a pane closes its own.
+  ipcMain.on('preview:hide', (event) => currentShell()?.hidePreviewFor(event.sender));
+
+  // The same bubble, asked for by one of the browser's own pages rather than
+  // by the chrome. Which pane it came from decides where it goes.
+  ipcMain.on('preview:show-in-page', (event, input, rect, viewport) =>
+    currentShell()?.showPreviewInPage(event.sender, input, rect, viewport));
 
   ipcMain.on('preview:activate', (event) => {
     const shellRef = currentShell();
-    // Only the preview view may ask for this, never a browsed page.
-    if (!shellRef || !shellRef.previewView) return;
-    if (event.sender !== shellRef.previewView.webContents) return;
-    shellRef.activatePreview();
+    if (!shellRef) return;
+
+    // Only a preview view, or the card around the address bar's, may ask for
+    // this - never a browsed page. Which preview it was decides which pane the
+    // page opens in.
+    for (const entry of shellRef.previews.values()) {
+      if (entry.view.webContents === event.sender) {
+        shellRef.activatePreviewFor(entry.owner);
+        return;
+      }
+    }
+    if (shellRef.frameView && !shellRef.frameView.webContents.isDestroyed() &&
+        shellRef.frameView.webContents === event.sender) {
+      shellRef.activatePreview();
+    }
   });
 
   ipcMain.on('find:query', withShell((s, query, opts) => s.find(query, opts)));
@@ -162,6 +197,21 @@ function registerIpc() {
   }));
 
   ipcMain.handle('history:list', withShell((s, limit = 200) => s.store.get('history').slice(0, limit)));
+  // Where the clouds have been, for whoever is drawing it.
+  ipcMain.handle('timeline:read', (event) => currentShell()?.trails(event.sender) || null);
+
+  ipcMain.handle('history:remove', withShell((s, url, visitedAt) => {
+    const gone = s.store.removeHistory(url, visitedAt);
+    s._broadcast();
+    return gone;
+  }));
+
+  ipcMain.handle('history:clear-between', withShell((s, from, to) => {
+    const gone = s.store.clearHistoryBetween(Number(from), Number(to));
+    s._broadcast();
+    return gone;
+  }));
+
   ipcMain.on('history:clear', withShell((s) => {
     s.store.clearHistory();
     s._broadcast();
@@ -175,16 +225,87 @@ function registerIpc() {
   });
   ipcMain.on('app:open-menu', withShell((s, x, y) => popupToolsMenu(s, x, y)));
 
+  // --- plugins ---------------------------------------------------------------
+
+  /** Everything installed, whether it loaded, and whether it is switched on. */
+  ipcMain.handle('plugins:list', () => plugins.list());
+
+  ipcMain.handle('plugins:set-enabled', (_event, id, on) => {
+    if (!plugins.setEnabled(id, Boolean(on))) return plugins.list();
+    // What a plugin contributes is decided at these two points, so both have to
+    // be told when the set of live plugins changes.
+    setPluginPages(plugins.pages());
+    Menu.setApplicationMenu(buildAppMenu(() => currentShell(), plugins));
+    currentShell()?._broadcast();
+    return plugins.list();
+  });
+
+  /** Read the folder again, for someone who has just added or edited one. */
+  ipcMain.handle('plugins:reload', () => {
+    plugins.load();
+    setPluginPages(plugins.pages());
+    Menu.setApplicationMenu(buildAppMenu(() => currentShell(), plugins));
+    currentShell()?._broadcast();
+    return plugins.list();
+  });
+
+  /** One colour, from the theme editor. */
+  ipcMain.handle('plugins:set-theme-value', (_event, themeId, fieldId, value) => {
+    if (!plugins.setThemeValue(themeId, fieldId, value)) return false;
+    // Repaint at once if it is the theme being worn.
+    if (store.get('theme') === themeId) currentShell()?.setTheme(themeId);
+    return true;
+  });
+
+  ipcMain.handle('plugins:open-folder', () => {
+    const dir = plugins.dirs[plugins.dirs.length - 1];
+    try {
+      fs.mkdirSync(dir, { recursive: true });
+    } catch {
+      /* it may already be there */
+    }
+    shell.openPath(dir);
+    return dir;
+  });
+
+  // --- the clouds on the new tab sky ---------------------------------------
+
+  registerSky(ipcMain, { store });
+
   // --- settings ------------------------------------------------------------
+
+  /**
+   * Cookies, storage, caches - everything a site has left behind. Not the same
+   * as history, and asked for separately.
+   */
+  ipcMain.handle('settings:clear-site-data', async () => {
+    await session.fromPartition(PARTITION).clearStorageData();
+    await session.fromPartition(PARTITION).clearCache();
+    return true;
+  });
 
   ipcMain.handle('settings:read', () => ({
     theme: store.get('theme'),
+    themeBase: currentShell()?.themeState().base || 'day',
+    pageThemeVars: currentShell()?.themeState().pageVariables || {},
+    // Whatever a plugin is offering, with the fields it wants filled in and
+    // what they are currently set to, so the page can draw the editor.
+    customThemes: plugins.themes().map((t) => ({
+      id: t.id,
+      name: t.name,
+      pluginName: plugins.plugins.get(t.plugin)?.name || t.plugin,
+      fields: t.fields,
+      values: plugins.themeValues(t.id)
+    })),
     homepage: store.get('homepage'),
     searchEngine: store.get('searchEngine'),
     engines: SEARCH_ENGINES,
     shortcuts: store.get('shortcuts'),
     defaultShortcuts: DEFAULT_SHORTCUTS,
     savePasswords: store.get('savePasswords'),
+    restoreSession: store.get('restoreSession') !== false,
+    saveHistory: store.get('saveHistory') !== false,
+    defaultZoom: Number(store.get('defaultZoom')) || 1,
     showFullUrl: store.get('showFullUrl') !== false,
     encryptionAvailable: vault.available,
     blockedOrigins: vault.data.never,
@@ -201,13 +322,24 @@ function registerIpc() {
     if (typeof patch.savePasswords === 'boolean') {
       store.set('savePasswords', patch.savePasswords);
     }
+    if (typeof patch.restoreSession === 'boolean') {
+      store.set('restoreSession', patch.restoreSession);
+    }
+    if (typeof patch.saveHistory === 'boolean') {
+      store.set('saveHistory', patch.saveHistory);
+    }
+    if (patch.defaultZoom !== undefined) {
+      currentShell()?.setDefaultZoom(patch.defaultZoom);
+    }
     if (typeof patch.showFullUrl === 'boolean') {
       store.set('showFullUrl', patch.showFullUrl);
     }
     if (patch.shortcuts && typeof patch.shortcuts === 'object') {
       store.set('shortcuts', sanitizeShortcuts(patch.shortcuts));
     }
-    if (patch.theme === 'day' || patch.theme === 'night') {
+    // Built in, or one a live plugin is offering.
+    if (typeof patch.theme === 'string' &&
+        (patch.theme === 'day' || patch.theme === 'night' || plugins.theme(patch.theme))) {
       currentShell()?.setTheme(patch.theme);
     }
     currentShell()?._broadcast();
@@ -255,14 +387,14 @@ function sanitizeShortcuts(input) {
 }
 
 function createShell(targets = []) {
-  const instance = new BrowserShell(store, vault);
+  const instance = new BrowserShell(store, vault, plugins);
   instance.pendingTargets = targets;
   shells.push(instance);
   instance.window.on('closed', () => {
     const i = shells.indexOf(instance);
     if (i >= 0) shells.splice(i, 1);
   });
-  Menu.setApplicationMenu(buildAppMenu(() => currentShell()));
+  Menu.setApplicationMenu(buildAppMenu(() => currentShell(), plugins));
   return instance;
 }
 
@@ -285,6 +417,8 @@ if (!app.requestSingleInstanceLock()) {
     app.setAppUserModelId('com.stratus.browser');
     store = new Store();
     vault = new PasswordVault();
+    plugins = new PluginHost(store);
+    setPluginPages(plugins.pages());
     nativeTheme.themeSource = store.get('theme') === 'night' ? 'dark' : 'light';
     configureSession();
     registerIpc();
