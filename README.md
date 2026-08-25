@@ -14,10 +14,11 @@ npm start
 > would be unreadable ciphertext — and stored `cloud://` addresses are rewritten
 > to `stratus://`.
 
-Stratus is the first of a family of small, cloud-themed programs — **Nimbus**
-(text editor), **Cumulus** (file explorer) and **Sky Box** (which installs and
-updates them). What they share, and what any of them may not do, is
-[docs/HOUSE-STYLE.md](docs/HOUSE-STYLE.md).
+Stratus is the first program in **[Ozone](https://github.com/GreenRu/Ozone)**, a
+family of small, cloud-themed desktop programs — with **Nimbus** (text editor),
+**Cumulus** (file explorer) and **Sky Box** (which installs and updates them) to
+follow. What they share, and what any of them may not do, is the
+[Ozone house style](https://github.com/GreenRu/Ozone/blob/main/docs/HOUSE-STYLE.md).
 
 ## Documentation
 
@@ -27,7 +28,6 @@ updates them). What they share, and what any of them may not do, is
 | [docs/PRIVACY.md](docs/PRIVACY.md) | What is stored, where, and what never leaves the machine |
 | [docs/PLUGINS.md](docs/PLUGINS.md) | Writing a plugin, with the full manifest reference |
 | [docs/TESTING.md](docs/TESTING.md) | How the assertion suites work and how to run them |
-| [docs/HOUSE-STYLE.md](docs/HOUSE-STYLE.md) | The shared style the whole Cloud Suite is built to: naming, palette, motion, architecture, plugins |
 | [PLAN.md](PLAN.md) | The working notes: what each check costs, and every trap found the hard way |
 
 ## What it does
