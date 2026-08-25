@@ -27,10 +27,7 @@
   --panel-line: rgba(255, 255, 255, 0.55);
   --hover: rgba(255, 255, 255, 0.5);
   --accent: #2472cf;
-  --droplet: #2b9fd6;
-  --meteor-head: #fff4dd;
-  --meteor-trail: rgba(255, 148, 38, 0.92);
-  --meteor-glow: rgba(255, 138, 26, 0.75);                 /* a kept page, on the star and the bar */
+  --droplet: #2b9fd6;                 /* a kept page, on the star and the bar */
   --danger: #d94a4a;
   --stage: #eaf3fc;
   --rain: #8fa3ba;
@@ -82,9 +79,6 @@
   --hover: rgba(255, 255, 255, 0.10);
   --accent: #6aa9ff;
   --droplet: #59c4f2;
-  --meteor-head: #ffffff;
-  --meteor-trail: rgba(186, 216, 255, 0.9);
-  --meteor-glow: rgba(130, 185, 255, 0.75);
   --stage: #0d1524;
   --rain: #7c8ea6;
   --rain-drop: rgba(190, 214, 240, 0.5);
@@ -1284,90 +1278,6 @@ body.resizing-panes { cursor: col-resize; }
   }
 }
 
-/* ---------- flights: meteors crossing the sky ---------- */
-
-/*
- * A file on its way down is a meteor.
- *
- * It can only fly where the chrome is: the strip above the page and the sidebar
- * column beside it. The page is a native view stacked over this document, and
- * anything drawn under it is simply not on screen - so the path is built from
- * the measured chrome rather than across the middle of the window, where it
- * would vanish.
- */
-.meteor-sky {
-  position: fixed;
-  inset: 0;
-  z-index: 5;
-  pointer-events: none;
-  overflow: hidden;
-}
-
-.meteor {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 84px;
-  height: 10px;
-  offset-distance: 0%;
-  offset-rotate: auto;
-  pointer-events: auto;   /* the one thing in the layer that can be pointed at */
-  cursor: help;
-  animation: meteor-fly linear infinite;
-}
-
-@keyframes meteor-fly {
-  from { offset-distance: 0%; }
-  to { offset-distance: 100%; }
-}
-
-/* Held: it hangs there, which also makes it easy to point at. */
-.meteor.held { animation-play-state: paused; }
-
-/* The streak. Bright at the head, gone by the tail. */
-.meteor-trail {
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  width: 76px;
-  height: 4px;
-  transform: translateY(-50%);
-  border-radius: 999px;
-  background: linear-gradient(90deg, transparent, var(--meteor-trail));
-}
-
-.meteor-head {
-  position: absolute;
-  right: 0;
-  top: 50%;
-  width: 11px;
-  height: 11px;
-  transform: translateY(-50%);
-  border-radius: 50%;
-  background: var(--meteor-head);
-  box-shadow: 0 0 14px 4px var(--meteor-glow), 0 0 4px 1px var(--meteor-head);
-}
-
-/* The name, fixed to the pointer rather than to the meteor - a label pinned to
-   something moving that fast is unreadable. */
-.meteor-label {
-  position: fixed;
-  z-index: 40;
-  padding: 5px 11px;
-  border-radius: 999px;
-  background: var(--bubble);
-  box-shadow: 0 8px 20px rgba(14, 32, 54, 0.28);
-  font-size: 11.5px;
-  font-weight: 600;
-  color: var(--text);
-  white-space: nowrap;
-  pointer-events: none;
-  transform: translate(14px, 16px);
-}
-
-.meteor-label[hidden] { display: none; }
-.meteor-label small { display: block; font-weight: 500; color: var(--text-dim); }
-
 /* ---------- the plane on the toolbar ---------- */
 
 /* How many are in the air, on the button that opens them. */
@@ -1389,15 +1299,5 @@ body.resizing-panes { cursor: col-resize; }
 
 .flight-count[hidden] { display: none; }
 #flights { position: relative; }
-#flights.flying { opacity: 1; }
-
-/* It turns while something is in the air, the way a rock does on its way down:
-   enough to notice out of the corner of an eye, not enough to nag. */
-#flights.flying svg { animation: asteroid-tumble 7s linear infinite; }
-
-@keyframes asteroid-tumble {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
 
 .sidebar.collapsed #flights { display: none; }

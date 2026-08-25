@@ -51,8 +51,6 @@ const el = {
   stage: $('stage'),
   flights: $('flights'),
   flightCount: $('flight-count'),
-  meteorSky: $('meteor-sky'),
-  meteorLabel: $('meteor-label'),
   thought: $('thought'),
   thoughtLabel: $('thought-label'),
   paneGrips: $('pane-grips'),
@@ -811,132 +809,29 @@ api.getState().then(render).catch(() => {
 
 /* ============================================================
    Flights
-
-   A file on its way down is a meteor crossing the sky. It can only cross the
-   part of the sky that is chrome - the strip above the page and the sidebar
-   column - because the page is a native view stacked over this document and
-   nothing drawn beneath it is on screen. So the path is measured from where the
-   page actually is, and rebuilt whenever that moves.
    ============================================================ */
 
-const meteors = new Map();
-let flightState = { flights: [] };
-
 /**
- * The route a meteor takes.
+ * What the plane on the toolbar says.
  *
- * In from beyond the right edge, left along the strip above the page, then a
- * turn down into the sidebar and out of the bottom - an arrival, ending where
- * the flights themselves live.
+ * A number, and nothing that moves. There was a meteor for each file crossing
+ * the sky here; it was taken out again because a thing flying about the window
+ * while you are trying to read a page is a distraction, however pretty. The
+ * count and the panel say everything the meteor did, and only when looked at.
  */
-function meteorPath() {
-  const stage = el.stage.getBoundingClientRect();
-  const sidebar = el.sidebar.getBoundingClientRect();
-
-  // How much sky there is above the page, and how wide the column beside it.
-  const band = Math.max(24, Math.round(stage.top));
-  const column = Math.max(24, Math.round(sidebar.width));
-
-  const entryY = Math.round(band * 0.42);
-  const turnX = Math.round(column * 0.55);
-  const turnY = Math.round(band * 0.72);
-
-  return `M ${window.innerWidth + 90} ${entryY}` +
-    ` L ${column + 60} ${entryY}` +
-    ` Q ${turnX} ${turnY} ${turnX} ${band + 40}` +
-    ` L ${Math.round(column * 0.42)} ${window.innerHeight + 90}`;
-}
-
 function renderFlights(state) {
-  flightState = state || { flights: [] };
-  const flights = flightState.flights || [];
+  const flights = (state && state.flights) || [];
   const inTheAir = flights.filter((f) => f.state === 'flying' || f.state === 'held');
 
-  // The plane says how many, and moves while any of them are moving.
   el.flightCount.hidden = inTheAir.length === 0;
   el.flightCount.textContent = String(inTheAir.length);
-  el.flights.classList.toggle('flying', inTheAir.some((f) => f.state === 'flying'));
   el.flights.title = inTheAir.length
     ? `${inTheAir.length} in the air (Ctrl+J)`
     : 'Flights (Ctrl+J)';
-
-  const wanted = new Set(inTheAir.map((f) => f.id));
-  for (const [id, node] of meteors) {
-    if (wanted.has(id)) continue;
-    node.remove();
-    meteors.delete(id);
-  }
-
-  const path = meteorPath();
-  for (const flight of inTheAir) {
-    let node = meteors.get(flight.id);
-    if (!node) {
-      node = document.createElement('div');
-      node.className = 'meteor';
-      node.dataset.id = flight.id;
-      node.innerHTML = '<span class="meteor-trail"></span><span class="meteor-head"></span>';
-
-      /*
-       * A meteor is small and quick, so the name is pinned to the pointer
-       * rather than to the meteor - a label chasing something moving that fast
-       * is unreadable, and would be gone by the time it was read.
-       */
-      node.addEventListener('pointerenter', () => showFlightLabel(flight.id));
-      node.addEventListener('pointermove', (event) => moveFlightLabel(event));
-      node.addEventListener('pointerleave', hideFlightLabel);
-      node.addEventListener('click', () => openFlights());
-
-      // Started part-way round, so several never fly in formation.
-      node.style.animationDelay = `-${(meteors.size * 2.3) % 9}s`;
-      el.meteorSky.appendChild(node);
-      meteors.set(flight.id, node);
-    }
-
-    node.style.offsetPath = `path("${path}")`;
-    // A big file crosses slowly; a small one is gone in a moment.
-    const megabytes = Math.max(0.5, (flight.total || flight.received || 0) / 1048576);
-    node.style.animationDuration = `${Math.min(16, 5 + Math.log2(megabytes + 1) * 1.6)}s`;
-    node.classList.toggle('held', flight.state === 'held');
-  }
-}
-
-function flightById(id) {
-  return (flightState.flights || []).find((f) => f.id === id);
-}
-
-let labelFor = null;
-
-function showFlightLabel(id) {
-  const flight = flightById(id);
-  if (!flight) return;
-  labelFor = id;
-  el.meteorLabel.replaceChildren();
-  const name = document.createElement('b');
-  name.textContent = flight.name;
-  const under = document.createElement('small');
-  under.textContent = flight.total > 0
-    ? `${Math.round((flight.received / flight.total) * 100)}% of ${Math.round(flight.total / 1048576)} MB`
-    : 'on its way';
-  el.meteorLabel.append(name, under);
-  el.meteorLabel.hidden = false;
-}
-
-function moveFlightLabel(event) {
-  if (!labelFor) return;
-  const box = el.meteorLabel.getBoundingClientRect();
-  const x = Math.min(event.clientX, window.innerWidth - box.width - 20);
-  const y = Math.min(event.clientY, window.innerHeight - box.height - 20);
-  el.meteorLabel.style.left = `${x}px`;
-  el.meteorLabel.style.top = `${y}px`;
-}
-
-function hideFlightLabel() {
-  labelFor = null;
-  el.meteorLabel.hidden = true;
 }
 
 /**
- * The panel, hanging from the asteroid. A view of its own; see the shell.
+ * The panel, hanging from the plane. A view of its own; see the shell.
  *
  * Pressing the button while the panel is up means put it away. Left to timing
  * it does not read that way: the press takes the keyboard off the panel, which
@@ -958,10 +853,3 @@ function openFlights() {
 
 el.flights.addEventListener('click', openFlights);
 api.on.flights((state) => renderFlights(state));
-
-// The path is measured from where the page is, so it is rebuilt when that moves.
-new ResizeObserver(() => {
-  if (!meteors.size) return;
-  const path = meteorPath();
-  for (const node of meteors.values()) node.style.offsetPath = `path("${path}")`;
-}).observe(el.stage);

@@ -163,15 +163,16 @@ A download is called a flight, because it arrives. `src/main/flights.js` owns
 every live one: the renderer names a flight by its id and asks for something to
 be done to it, and never holds a `DownloadItem` or names a path.
 
-Two things about the interface are decided by the law above, not by taste.
+The interface for it is a count on the toolbar and a panel behind it, and
+nothing else. There was a meteor for each file, crossing the sky while it came
+down; it was taken out again, because a thing moving about the window while
+somebody is reading a page is a distraction however well it is drawn. The count
+and the panel say everything it said, and only when looked at.
 
-**The meteor can only fly where the chrome is.** A file on its way down crosses
-the sky as a meteor, and the sky it crosses is the strip above the page and the
-sidebar column - the two parts of the window a page view does not cover. The
-path is measured from where the page actually is (`meteorPath()` in the
-renderer) and rebuilt whenever that moves, because a meteor routed across the
-middle of the window would be behind the page and simply not there. The suite
-asserts that no point on the path lands inside the page's rectangle.
+That is worth recording rather than quietly reverting, because the meteor also
+proved the constraint: anything drawn in the chrome can only occupy the strip
+above the page and the sidebar column, since a page view covers the rest. A
+future flourish here has the same two strips to live in.
 
 **The panel is its own view.** It hangs down from a button in the sidebar,
 straight into the page area, so it cannot be chrome. Unlike the cloud menu it

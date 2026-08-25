@@ -105,13 +105,12 @@ follow. What they share, and what any of them may not do, is the
 - **Droplets** — kept pages, in a row above the page that `Ctrl+Shift+B` shows
   and hides. Right-click one to open it, open it in a new cloud, copy its link
   or delete it.
-- **Flights** — what a download is called here, because it arrives. Each one
-  crosses the sky as a meteor while it comes down; point at it and the file
-  names itself. The asteroid on the toolbar says how many are in the air and
-  opens a panel to hold, resume, cancel or retry them — press it again to put
-  the panel away. `stratus://flights` (`Ctrl+J`) is the whole record, kept
-  between launches. A name already in use is numbered rather than written
-  over.
+- **Flights** — what a download is called here, because it arrives. The plane
+  on the toolbar says how many are in the air and opens a panel to hold, resume,
+  cancel or retry them — press it again to put the panel away. Nothing flies
+  about the window while you are reading. `stratus://flights` (`Ctrl+J`) is the
+  whole record, kept between launches, and a name already in use is numbered
+  rather than written over.
 - **Saved passwords**, encrypted with the OS keystore — see
   [docs/PRIVACY.md](docs/PRIVACY.md).
 - **Saved cards**, encrypted the same way. Only the last four digits and the

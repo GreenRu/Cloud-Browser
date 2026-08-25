@@ -8,10 +8,9 @@ const path = require('path');
  * Flights - files on their way down out of the sky.
  *
  * A browser calls these downloads. Stratus calls them flights, because they
- * arrive: one leaves a site, crosses the sky as a meteor, and lands somewhere
- * on this computer. `stratus://downloads` still works, and the save dialog
- * still says what everyone else says, so nobody has to learn the word to use
- * the thing.
+ * arrive: one leaves a site and lands somewhere on this computer.
+ * `stratus://downloads` still works, and the save dialog still says what
+ * everyone else says, so nobody has to learn the word to use the thing.
  *
  * Everything about a live download lives here. The renderer is told what is
  * happening and asks for things to be done; it never holds a `DownloadItem`,
@@ -267,8 +266,8 @@ class Flights {
   /**
    * Anything that was in the air when the browser last shut is not any more.
    *
-   * Called at startup. A flight left saying "flying" would show a meteor for a
-   * download nothing is doing, and its progress would never move.
+   * Called at startup. A flight left saying "flying" would be counted on the
+   * toolbar for a download nothing is doing, and its progress would never move.
    */
   groundEverything() {
     let touched = false;
