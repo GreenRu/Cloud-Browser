@@ -128,7 +128,8 @@
         color: var(--text-dim);
       }
 
-      .mark svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+      /* Each icon carries its own fill or stroke; only the size is set here. */
+      .mark svg { width: 15px; height: 15px; }
       .flight.landed .mark { color: var(--accent); }
       .flight.lost .mark, .flight.stalled .mark { color: var(--danger); }
 
@@ -191,7 +192,7 @@
         transition: background 120ms ease, color 120ms ease;
       }
 
-      .doings button svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+      .doings button svg { width: 14px; height: 14px; }
       .doings button:hover { background: var(--hover); color: var(--text); }
       .doings button.danger:hover { background: rgba(217, 74, 74, 0.16); color: var(--danger); }
 
@@ -226,6 +227,7 @@
         <button class="link" id="all">See all flights</button>
       </div>
     </div>
+    <script src="../shared/icons.js"></script>
     <script src="./flights-panel.js"></script>
   </body>
 </html>

@@ -1,3 +1,6 @@
+
+// Every element that named an icon gets one.
+window.Icons.paint(document);
 'use strict';
 
 /**

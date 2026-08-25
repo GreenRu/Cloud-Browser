@@ -12,22 +12,24 @@ const bridge = window.flightsPanel;
 const list = document.getElementById('list');
 const panel = document.getElementById('panel');
 
+const I = window.Icons;
+
 const ICON = {
-  flying: '<svg viewBox="0 0 24 24"><path d="M2.5 13.5 21 5l-4 8 4 8-18.5-8.5Z"/></svg>',
-  held: '<svg viewBox="0 0 24 24"><path d="M9 6v12M15 6v12"/></svg>',
-  landed: '<svg viewBox="0 0 24 24"><path d="M5 12.5 10 17l9-10"/></svg>',
-  stalled: '<svg viewBox="0 0 24 24"><path d="M12 7v6M12 16.5v.5"/><circle cx="12" cy="12" r="8.5"/></svg>',
-  lost: '<svg viewBox="0 0 24 24"><path d="M7 7l10 10M17 7L7 17"/></svg>',
-  'called off': '<svg viewBox="0 0 24 24"><path d="M7 7l10 10M17 7L7 17"/></svg>'
+  flying: I.svg('airplane'),
+  held: I.svg('play-pause'),
+  landed: I.svg('check'),
+  stalled: I.svg('danger'),
+  lost: I.svg('close'),
+  'called off': I.svg('close')
 };
 
 const DO = {
-  hold: '<svg viewBox="0 0 24 24"><path d="M9 6v12M15 6v12"/></svg>',
-  'carry-on': '<svg viewBox="0 0 24 24"><path d="M7 5l12 7-12 7z"/></svg>',
-  'call-off': '<svg viewBox="0 0 24 24"><path d="M7 7l10 10M17 7L7 17"/></svg>',
-  again: '<svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-.6 4"/><path d="M20 4v7h-7"/></svg>',
-  reveal: '<svg viewBox="0 0 24 24"><path d="M4 18V7a1 1 0 0 1 1-1h4l2 2h8a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1Z"/></svg>',
-  forget: '<svg viewBox="0 0 24 24"><path d="M6 7h12M9 7V5h6v2M8 7l1 12h6l1-12"/></svg>'
+  hold: I.svg('play-pause'),
+  'carry-on': I.svg('play-button'),
+  'call-off': I.svg('close'),
+  again: I.svg('sync'),
+  reveal: I.svg('folder'),
+  forget: I.svg('trash')
 };
 
 /** Sizes people read, not sizes computers store. */

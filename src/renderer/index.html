@@ -30,74 +30,53 @@
           autocomplete="off"
           placeholder="Search or type a URL"
           aria-label="Address and search bar" />
-        <button class="omni-btn" id="droplet" title="Keep as a droplet (Ctrl+D)" aria-label="Keep as a droplet">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5c3.4 4 5.5 6.7 5.5 9.4a5.5 5.5 0 0 1-11 0c0-2.7 2.1-5.4 5.5-9.4Z" /></svg>
-        </button>
+        <button class="omni-btn" id="droplet" title="Keep as a droplet (Ctrl+D)" aria-label="Keep as a droplet" data-icon="drop">
+          </button>
       </div>
 
       <div class="nav-row">
-        <button class="tool-btn" id="back" title="Back (Alt+Left)" aria-label="Back">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>
-        </button>
-        <button class="tool-btn" id="forward" title="Forward (Alt+Right)" aria-label="Forward">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" /></svg>
-        </button>
+        <button class="tool-btn" id="back" title="Back (Alt+Left)" aria-label="Back" data-icon="chevron-left">
+          </button>
+        <button class="tool-btn" id="forward" title="Forward (Alt+Right)" aria-label="Forward" data-icon="chevron-right">
+          </button>
         <button class="tool-btn" id="reload" title="Reload (Ctrl+R)" aria-label="Reload">
-          <svg viewBox="0 0 24 24" aria-hidden="true" class="icon-reload">
-            <path d="M20 11a8 8 0 1 0-.6 4" />
-            <path d="M20 4v7h-7" />
-          </svg>
-          <svg viewBox="0 0 24 24" aria-hidden="true" class="icon-stop">
-            <path d="M6 6l12 12M18 6L6 18" />
-          </svg>
+          <span class="icon-reload" data-icon="sync"></span>
+          <span class="icon-stop" data-icon="close"></span>
         </button>
-        <button class="tool-btn" id="home" title="Home (Alt+Home)" aria-label="Home">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11l8-6 8 6v8a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z" /></svg>
-        </button>
+        <button class="tool-btn" id="home" title="Home (Alt+Home)" aria-label="Home" data-icon="home">
+          </button>
 
         <span class="nav-gap"></span>
 
-        <button class="tool-btn" id="flights" title="Flights (Ctrl+J)" aria-label="Flights">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 13.2 21 4.6l-3.7 8.1 3.7 8.1-18.5-8.6Z" /><path d="M2.5 13.2 12 12.7" /></svg>
+        <button class="tool-btn" id="flights" title="Flights (Ctrl+J)" aria-label="Flights" data-icon="airplane">
           <span class="flight-count" id="flight-count" hidden></span>
         </button>
-        <button class="tool-btn" id="droplet-bar-toggle" title="Show droplets (Ctrl+Shift+B)" aria-label="Show droplets" aria-pressed="false">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5c3.4 4 5.5 6.7 5.5 9.4a5.5 5.5 0 0 1-11 0c0-2.7 2.1-5.4 5.5-9.4Z" /></svg>
-        </button>
-        <button class="tool-btn" id="find-open" title="Find in page (Ctrl+F)" aria-label="Find in page">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6" /><path d="M20 20l-4.3-4.3" /></svg>
-        </button>
-        <button class="tool-btn" id="settings" title="Settings (Ctrl+,)" aria-label="Settings">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2" /><path d="M19.4 13.5a7.7 7.7 0 0 0 0-3l1.7-1.3-1.9-3.3-2 .8a7.8 7.8 0 0 0-2.6-1.5L14.3 3H10.5l-.3 2.2a7.8 7.8 0 0 0-2.6 1.5l-2-.8L3.7 9.2l1.7 1.3a7.7 7.7 0 0 0 0 3l-1.7 1.3 1.9 3.3 2-.8a7.8 7.8 0 0 0 2.6 1.5l.3 2.2h3.8l.3-2.2a7.8 7.8 0 0 0 2.6-1.5l2 .8 1.9-3.3z" /></svg>
-        </button>
-        <button class="tool-btn" id="menu" title="Menu" aria-label="Menu" aria-haspopup="true">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5.5" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="12" cy="18.5" r="1.6" /></svg>
-        </button>
+        <button class="tool-btn" id="droplet-bar-toggle" title="Show droplets (Ctrl+Shift+B)" aria-label="Show droplets" aria-pressed="false" data-icon="drop">
+          </button>
+        <button class="tool-btn" id="find-open" title="Find in page (Ctrl+F)" aria-label="Find in page" data-icon="search">
+          </button>
+        <button class="tool-btn" id="settings" title="Settings (Ctrl+,)" aria-label="Settings" data-icon="options">
+          </button>
+        <button class="tool-btn" id="menu" title="Menu" aria-label="Menu" aria-haspopup="true" data-icon="more-vertical-alt">
+          </button>
       </div>
 
       <div class="tab-scroll">
         <div class="tabstrip" id="tabstrip" role="tablist" aria-label="Open tabs"></div>
         <!-- Only present while two or more clouds are selected. -->
         <button class="merge-clouds" id="merge-clouds" hidden>
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <rect x="3" y="6" width="7.5" height="12" rx="2" />
-            <rect x="13.5" y="6" width="7.5" height="12" rx="2" />
-          </svg>
+          <span class="button-icon" data-icon="arrows-merge-alt-v"></span>
           <span id="merge-label">Merge</span>
         </button>
 
         <!-- Only present while the cloud you are on holds more than one page. -->
         <button class="merge-clouds split-clouds" id="split-clouds" hidden>
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <rect x="3" y="6" width="7.5" height="12" rx="2" />
-            <rect x="13.5" y="6" width="7.5" height="12" rx="2" />
-            <path d="M12 3v18" />
-          </svg>
+          <span class="button-icon" data-icon="arrows-breake-v"></span>
           <span id="split-label">Split</span>
         </button>
 
         <button class="new-cloud" id="new-tab" title="New tab (Ctrl+T)" aria-label="New tab">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+          <span class="button-icon" data-icon="add"></span>
           <span>New cloud</span>
         </button>
       </div>
@@ -155,24 +134,19 @@
       </div>
 
       <div class="drawer find-bar" id="find-bar" hidden>
-        <svg viewBox="0 0 24 24" aria-hidden="true" class="drawer-icon"><circle cx="11" cy="11" r="6" /><path d="M20 20l-4.3-4.3" /></svg>
+        <span class="drawer-icon" data-icon="search"></span>
         <input id="find-input" type="text" placeholder="Find in page" aria-label="Find in page" spellcheck="false" autocomplete="off" />
         <span class="find-count" id="find-count">0/0</span>
-        <button class="tool-btn small" id="find-prev" title="Previous match" aria-label="Previous match">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 14l6-6 6 6" /></svg>
-        </button>
-        <button class="tool-btn small" id="find-next" title="Next match" aria-label="Next match">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 10l6 6 6-6" /></svg>
-        </button>
-        <button class="tool-btn small" id="find-close" title="Close (Esc)" aria-label="Close find bar">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
-        </button>
+        <button class="tool-btn small" id="find-prev" title="Previous match" aria-label="Previous match" data-icon="chevron-up">
+          </button>
+        <button class="tool-btn small" id="find-next" title="Next match" aria-label="Next match" data-icon="chevron-down">
+          </button>
+        <button class="tool-btn small" id="find-close" title="Close (Esc)" aria-label="Close find bar" data-icon="close">
+          </button>
       </div>
 
       <div class="drawer save-password" id="save-password" hidden>
-        <svg viewBox="0 0 24 24" aria-hidden="true" class="drawer-icon">
-          <rect x="5" y="10.5" width="14" height="9" rx="2" /><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" />
-        </svg>
+        <span class="drawer-icon" data-icon="lock"></span>
         <span class="save-password-text" id="save-password-text"></span>
         <button class="pill-btn ghost" id="save-password-never">Never</button>
         <button class="pill-btn ghost" id="save-password-dismiss">Not now</button>
@@ -194,6 +168,7 @@
       </div>
     </main>
 
+    <script src="../shared/icons.js"></script>
     <script src="../shared/theme.js"></script>
     <script src="../shared/clouds.js"></script>
     <script src="./cloud-tabs.js"></script>

@@ -161,9 +161,7 @@ function historyRow(entry) {
   forget.type = 'button';
   forget.title = 'Forget this page';
   forget.setAttribute('aria-label', 'Forget this page');
-  forget.innerHTML =
-    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
-    'stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+  forget.innerHTML = window.Icons.svg('close');
   forget.addEventListener('click', async (event) => {
     // The row itself opens the page; the button must not.
     event.stopPropagation();

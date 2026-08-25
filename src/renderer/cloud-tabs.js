@@ -19,12 +19,14 @@ const NARROW_WIDTH = 108;
 
 const { buildLobes, RAIN_CLOUD } = window.CloudShape;
 
-const ICON_CLOSE =
-  '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
-const ICON_AUDIO =
-  '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5L6.5 9H4v6h2.5L11 19z"/><path d="M15 9.5a3.5 3.5 0 0 1 0 5"/></svg>';
-const ICON_MUTED =
-  '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5L6.5 9H4v6h2.5L11 19z"/><path d="M16 10l4 4M20 10l-4 4"/></svg>';
+const ICON_CLOSE = window.Icons.svg('close');
+/*
+ * The set has one speaker and no muted one, so muting is drawn rather than
+ * fetched: the same icon with a bar through it, put there by the stylesheet.
+ * Altering the icon itself would take it outside the licence it came under.
+ */
+const ICON_AUDIO = window.Icons.svg('volume');
+const ICON_MUTED = window.Icons.svg('volume');
 // Nothing to show for this page: same raining cloud as everywhere else.
 const ICON_PAGE = RAIN_CLOUD;
 
@@ -33,14 +35,11 @@ const ICON_PAGE = RAIN_CLOUD;
  * makes a new tab look half-loaded. Give each one its own mark.
  */
 const INTERNAL_ICONS = {
-  'stratus://newtab':
-    '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" stroke="none" d="M6.5 18h11a4 4 0 0 0 .6-7.95A5.5 5.5 0 0 0 7.6 8.6 4.2 4.2 0 0 0 6.5 18Z"/></svg>',
-  'stratus://settings':
-    '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.1"/><path d="M19.4 13.5a7.7 7.7 0 0 0 0-3l1.7-1.3-1.9-3.3-2 .8a7.8 7.8 0 0 0-2.6-1.5L14.3 3H10.5l-.3 2.2a7.8 7.8 0 0 0-2.6 1.5l-2-.8L3.7 9.2l1.7 1.3a7.7 7.7 0 0 0 0 3l-1.7 1.3 1.9 3.3 2-.8a7.8 7.8 0 0 0 2.6 1.5l.3 2.2h3.8l.3-2.2a7.8 7.8 0 0 0 2.6-1.5l2 .8 1.9-3.3z"/></svg>',
-  'stratus://history':
-    '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 7.5V12l3 1.8"/></svg>',
-  'stratus://droplets':
-    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5c3.4 4 5.5 6.7 5.5 9.4a5.5 5.5 0 0 1-11 0c0-2.7 2.1-5.4 5.5-9.4Z"/></svg>'
+  'stratus://newtab': window.Icons.svg('cloud'),
+  'stratus://settings': window.Icons.svg('options'),
+  'stratus://history': window.Icons.svg('time'),
+  'stratus://droplets': window.Icons.svg('drop'),
+  'stratus://flights': window.Icons.svg('airplane')
 };
 
 /* How long a closing cloud takes to drift clear and then fade out, and how much
@@ -286,6 +285,7 @@ class CloudTabStrip {
     audio.hidden = !showAudio;
     if (showAudio) {
       audio.innerHTML = tab.muted ? ICON_MUTED : ICON_AUDIO;
+      audio.classList.toggle('muted', Boolean(tab.muted));
       audio.title = tab.muted ? 'Unmute tab' : 'Mute tab';
     }
     el.dataset.muted = String(Boolean(tab.muted));

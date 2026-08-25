@@ -473,10 +473,7 @@
 
         <div class="ask-bubble" id="ask-bubble" hidden>
           <div class="ask-head">
-            <svg class="ask-arrow" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor"
-                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M5 12h13M13 6l6 6-6 6" />
-            </svg>
+            <span class="ask-arrow" data-icon="arrow-right"></span>
             <span id="ask-target"></span>
             <span class="ask-hint">Enter to open</span>
           </div>
@@ -488,10 +485,7 @@
           <input id="ask" type="text" spellcheck="false" autocomplete="off"
                  placeholder="Search the sky, or type an address" aria-label="Search or type an address" />
           <button type="submit" aria-label="Go">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M5 12h13M13 6l6 6-6 6" />
-            </svg>
+            <span data-icon="arrow-right"></span>
           </button>
         </form>
 
@@ -500,6 +494,7 @@
     </main>
 
     <script src="../shared/clouds.js"></script>
+    <script src="../shared/icons.js"></script>
     <script src="../shared/theme.js"></script>
     <script src="../shared/stars.js"></script>
     <script src="../shared/birds.js"></script>

@@ -59,12 +59,12 @@ const el = {
   thoughtUrl: $('thought-url')
 };
 
-const BADGE_SECURE =
-  '<svg viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="9" rx="2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></svg>';
-const BADGE_INSECURE =
-  '<svg viewBox="0 0 24 24"><path d="M12 8v5"/><circle cx="12" cy="16.5" r="0.9" fill="currentColor"/><path d="M10.6 4.4 3.5 17a1.6 1.6 0 0 0 1.4 2.4h14.2A1.6 1.6 0 0 0 20.5 17L13.4 4.4a1.6 1.6 0 0 0-2.8 0Z"/></svg>';
-const BADGE_INTERNAL =
-  '<svg viewBox="0 0 24 24"><path d="M6.5 17h11a3.6 3.6 0 0 0 .5-7.2A5 5 0 0 0 7.6 8.4 3.8 3.8 0 0 0 6.5 17Z"/></svg>';
+const BADGE_SECURE = window.Icons.svg('lock');
+const BADGE_INSECURE = window.Icons.svg('danger');
+const BADGE_INTERNAL = window.Icons.svg('cloud');
+
+// Every element that named an icon gets one, before anything is drawn.
+window.Icons.paint(document);
 
 const SIDEBAR_MIN = 190;
 const SIDEBAR_MAX = 400;

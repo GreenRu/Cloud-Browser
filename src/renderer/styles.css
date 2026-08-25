@@ -125,14 +125,44 @@ button {
 /* Pressing anything squashes it slightly, then it springs back. */
 button:active { transform: scale(0.92); }
 
+/*
+ * Icons come from css.gg and carry their own fill or stroke - part of the set
+ * is drawn one way and part the other - so nothing here may set either. Size
+ * and colour only, and each icon paints itself the way it was drawn.
+ *
+ * The cloud silhouettes are not icons and are styled where they are built.
+ */
 svg {
   width: 100%;
   height: 100%;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+}
+
+/* An icon sitting beside a word in a wider button. */
+.button-icon {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+}
+
+/*
+ * Muted. The set has one speaker and no crossed-out one, so the bar is drawn
+ * here rather than by altering the icon - an icon that has been edited is no
+ * longer the one the licence covers.
+ */
+.tab-audio.muted { position: relative; }
+
+.tab-audio.muted::after {
+  content: "";
+  position: absolute;
+  left: 8%;
+  top: 46%;
+  width: 84%;
+  height: 1.7px;
+  border-radius: 2px;
+  background: currentColor;
+  transform: rotate(-38deg);
 }
 
 /* ---------- sidebar ---------- */
@@ -230,7 +260,6 @@ svg {
 }
 
 .omni-badge { flex: 0 0 auto; width: 15px; height: 15px; color: var(--text-dim); }
-.omni-badge svg { stroke-width: 1.9; }
 .omni-badge.secure { color: #2f9e5f; }
 .omni-badge.insecure { color: var(--danger); }
 
@@ -269,11 +298,10 @@ svg {
   55% { transform: translateY(1px) scaleY(0.8) scaleX(1.2); }
   100% { transform: none; }
 }
-.omni-btn.on svg { fill: currentColor; }
+/* `drop` is stroked, not filled, so being kept reads by colour alone. */
 
 /* The toolbar button that shows the row of them, lit while the row is up. */
 #droplet-bar-toggle.on { color: var(--droplet); opacity: 1; }
-#droplet-bar-toggle.on svg { fill: currentColor; }
 
 /* ---------- nav row ---------- */
 
@@ -347,7 +375,7 @@ svg {
 }
 
 .merge-clouds[hidden] { display: none; }
-.merge-clouds svg { width: 15px; height: 15px; flex: 0 0 auto; stroke-width: 2; }
+.merge-clouds svg { width: 15px; height: 15px; flex: 0 0 auto; }
 .merge-clouds:hover { transform: translateY(-2px) scale(1.02); }
 .merge-clouds:active { transform: scale(0.97); }
 

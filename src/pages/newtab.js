@@ -1,3 +1,6 @@
+
+// Every element that named an icon gets one.
+window.Icons.paint(document);
 'use strict';
 
 const bridge = window.cloudPage;
@@ -31,9 +34,7 @@ const SKY_SLOTS = [
 /** Reserved for the add cloud, so nothing is ever placed on top of it. */
 const ADD_SLOT = { x: '44%', y: '76%', s: 0.82, o: 0.7 };
 
-const ICON_ADD =
-  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
-  'stroke-linecap="round" aria-hidden="true"><path d="M12 6v12M6 12h12"/></svg>';
+const ICON_ADD = window.Icons.svg('add');
 
 /**
  * Somewhere for the nth cloud to go once the hand-placed slots are used up.

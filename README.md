@@ -310,6 +310,18 @@ account picker for sites with several saved logins. The plumbing is in place for
 each: `shells` is already an array, `Store` takes arbitrary keys, and
 permissions are gated in one place in `src/main/index.js`.
 
+## Icons
+
+From [css.gg](https://css.gg) by Astrit, tag `2.1.1`, under the MIT licence. The
+set is shared across the family and lives in
+[Ozone/icons](https://github.com/GreenRu/Ozone/tree/main/icons); `src/shared/icons.js`
+here is generated from it and committed, so this repository stands on its own.
+
+Later css.gg releases are licensed for non-commercial use only, which cannot
+ship in a GPL program - hence the pinned version.
+
+The program's own cloud mark is not from the set and is drawn by hand.
+
 ## License
 
 Stratus is free software under the [GNU General Public License v3](LICENSE) or
