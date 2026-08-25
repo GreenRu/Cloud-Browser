@@ -30,8 +30,8 @@
           autocomplete="off"
           placeholder="Search or type a URL"
           aria-label="Address and search bar" />
-        <button class="omni-btn" id="bookmark" title="Bookmark this page (Ctrl+D)" aria-label="Bookmark">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5l2.2 4.6 5 .7-3.6 3.5.85 5-4.45-2.35L7.55 18.3l.85-5L4.8 9.8l5-.7z" /></svg>
+        <button class="omni-btn" id="droplet" title="Keep as a droplet (Ctrl+D)" aria-label="Keep as a droplet">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5c3.4 4 5.5 6.7 5.5 9.4a5.5 5.5 0 0 1-11 0c0-2.7 2.1-5.4 5.5-9.4Z" /></svg>
         </button>
       </div>
 
@@ -57,6 +57,9 @@
 
         <span class="nav-gap"></span>
 
+        <button class="tool-btn" id="droplet-bar-toggle" title="Show droplets (Ctrl+Shift+B)" aria-label="Show droplets" aria-pressed="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5c3.4 4 5.5 6.7 5.5 9.4a5.5 5.5 0 0 1-11 0c0-2.7 2.1-5.4 5.5-9.4Z" /></svg>
+        </button>
         <button class="tool-btn" id="find-open" title="Find in page (Ctrl+F)" aria-label="Find in page">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6" /><path d="M20 20l-4.3-4.3" /></svg>
         </button>
@@ -172,7 +175,7 @@
         <button class="pill-btn primary" id="save-password-save">Save</button>
       </div>
 
-      <div class="drawer bookmarks-bar" id="bookmarks-bar" hidden></div>
+      <div class="drawer droplet-bar" id="droplet-bar" hidden></div>
 
       <div class="drawer toast" id="toast" hidden>
         <span class="toast-text" id="toast-text"></span>

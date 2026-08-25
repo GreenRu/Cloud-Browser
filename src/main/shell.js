@@ -734,11 +734,26 @@ class BrowserShell {
 
   /** Open a cloud's menu at a point in the window. */
   showCloudMenu(id, x, y, selected = []) {
-    const menu = this.tabMenu(id, selected);
+    this._showMenu({ kind: 'cloud', id, selected }, this.tabMenu(id, selected), x, y);
+  }
+
+  /** And a droplet's, which is the same card with a different list on it. */
+  showDropletMenu(id, x, y) {
+    this._showMenu({ kind: 'droplet', id }, this.dropletMenu(id), x, y);
+  }
+
+  /**
+   * Show whichever menu was built, at a point in the window.
+   *
+   * What the menu is for is remembered here rather than sent to the view: the
+   * view is handed labels and hands back a name, and the browser alone decides
+   * what that name means.
+   */
+  _showMenu(what, menu, x, y) {
     if (!menu || this.window.isDestroyed()) return;
 
     const view = this._ensureCloudMenu();
-    this.menuOpen = { id, selected, x, y };
+    this.menuOpen = { ...what, x, y };
 
     // Parked off-screen until it has said how big it is; showing it at a
     // guessed size would flash a card of the wrong shape.
@@ -796,7 +811,50 @@ class BrowserShell {
   runCloudMenu(action) {
     const open = this.menuOpen;
     this.hideCloudMenu();
-    if (open) this.runTabMenu(open.id, action, open.selected);
+    if (!open) return;
+    if (open.kind === 'droplet') this.runDropletMenu(open.id, action);
+    else this.runTabMenu(open.id, action, open.selected);
+  }
+
+  /** What one droplet offers. */
+  dropletMenu(id) {
+    const droplet = this.store.get('bookmarks').find((b) => b.id === id);
+    if (!droplet) return null;
+
+    return {
+      seed: `droplet-${id}`,
+      title: droplet.title || prettifyUrl(droplet.url),
+      items: [
+        { id: 'open', label: 'Open', enabled: true },
+        { id: 'open-new', label: 'Open in new cloud', enabled: true },
+        { id: 'copy', label: 'Copy link', enabled: true },
+        { type: 'separator' },
+        { id: 'delete', label: 'Delete droplet', enabled: true, danger: true }
+      ]
+    };
+  }
+
+  /** Do what was chosen from it. Nothing here trusts the label, only the name. */
+  runDropletMenu(id, action) {
+    const droplet = this.store.get('bookmarks').find((b) => b.id === id);
+    if (!droplet) return;
+
+    switch (action) {
+      case 'open': this.navigate(droplet.url); break;
+      case 'open-new': this.newTab(droplet.url); break;
+      case 'copy': clipboard.writeText(prettifyUrl(droplet.url)); break;
+      case 'delete':
+        this.store.removeBookmark(id);
+        this._broadcast();
+        break;
+      default: break;
+    }
+  }
+
+  /** Show the droplet bar, or put it away. */
+  setDropletsVisible(on) {
+    this.store.set('showDroplets', Boolean(on));
+    this._broadcast();
   }
 
   /** Put the frame away, leaving the view it framed alone. */
@@ -1351,8 +1409,9 @@ class BrowserShell {
       pageThemeVars: theme.pageVariables,
       sidebarWidth: this.store.get('sidebarWidth'),
       showFullUrl: this.store.get('showFullUrl') !== false,
-      bookmarks: this.store.get('bookmarks'),
-      bookmarked: active ? this.store.isBookmarked(active.url) : false,
+      droplets: this.store.get('bookmarks'),
+      dropletKept: active ? this.store.isBookmarked(active.url) : false,
+      showDroplets: this.store.get('showDroplets') !== false,
       gutters: this.gutters,
       pluginToolbar: this.plugins ? this.plugins.toolbar() : []
     };
@@ -1496,8 +1555,8 @@ class BrowserShell {
       { id: 'mute', label: tab.muted ? 'Unmute cloud' : 'Mute cloud' },
       { type: 'separator' },
       {
-        id: 'bookmark',
-        label: this.store.isBookmarked(tab.url) ? 'Remove bookmark' : 'Bookmark this page',
+        id: 'droplet',
+        label: this.store.isBookmarked(tab.url) ? 'Remove droplet' : 'Keep as droplet',
         accelerator: 'Ctrl+D'
       },
       { id: 'copy', label: 'Copy address' }
@@ -1525,7 +1584,7 @@ class BrowserShell {
     );
 
     return {
-      tabId: id,
+      seed: `cloud-${id}`,
       title: tab.title || prettifyUrl(tab.url),
       items: items.map((item) => ({ enabled: true, ...item }))
     };
@@ -1545,7 +1604,7 @@ class BrowserShell {
         tab.setMuted(!tab.muted);
         this._broadcast();
         break;
-      case 'bookmark':
+      case 'droplet':
         this.store.toggleBookmark({ url: tab.url, title: tab.title });
         this._broadcast();
         break;

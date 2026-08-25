@@ -23,6 +23,7 @@
         "--text": "@text",
         "--text-dim": "@text-dim",
         "--accent": "@accent",
+        "--droplet": "@droplet",
         "--danger": "@danger",
         "--field": "@field",
         "--field-line": "@field-line 0.1",
@@ -143,6 +144,13 @@
           "group": "Text and controls",
           "type": "color",
           "default": "#2472cf"
+        },
+        {
+          "id": "droplet",
+          "label": "Droplet",
+          "group": "Text and controls",
+          "type": "color",
+          "default": "#2b9fd6"
         },
         {
           "id": "danger",

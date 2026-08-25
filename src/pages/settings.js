@@ -166,7 +166,7 @@ $('save-history').addEventListener('change', (e) => patch({ saveHistory: e.targe
 $('default-zoom').addEventListener('change', (e) => patch({ defaultZoom: Number(e.target.value) }));
 
 $('open-history').addEventListener('click', () => bridge?.navigate('stratus://history'));
-$('open-bookmarks').addEventListener('click', () => bridge?.navigate('stratus://bookmarks'));
+$('open-droplets').addEventListener('click', () => bridge?.navigate('stratus://droplets'));
 
 $('clear-site-data').addEventListener('click', async () => {
   const note = $('data-note');
@@ -547,13 +547,13 @@ function renderSources(sources) {
 
     const take = document.createElement('button');
     take.className = 'ghost-btn';
-    take.textContent = 'Bring bookmarks over';
+    take.textContent = 'Bring bookmarks over';   // their word for them, over there
     take.addEventListener('click', async () => {
       take.disabled = true;
       const result = await bridge.transfer.bookmarks(source.id);
       take.disabled = false;
       importNote.textContent = result && result.ok
-        ? `${result.added} bookmark${result.added === 1 ? '' : 's'} brought over from ${source.browser}.`
+        ? `${result.added} droplet${result.added === 1 ? '' : 's'} brought over from ${source.browser}.`
         : `Could not read that: ${(result && result.error) || 'unknown problem'}.`;
     });
 
@@ -576,7 +576,7 @@ const fromFile = (kind, what) => async () => {
   if (kind === 'passwords') renderPasswords();
 };
 
-$('import-bookmarks-file').addEventListener('click', fromFile('bookmarks', 'bookmark'));
+$('import-bookmarks-file').addEventListener('click', fromFile('bookmarks', 'droplet'));
 $('import-passwords-file').addEventListener('click', fromFile('passwords', 'login'));
 $('import-cards-file').addEventListener('click', fromFile('cards', 'card'));
 

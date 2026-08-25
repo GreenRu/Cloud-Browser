@@ -206,13 +206,16 @@ function registerIpc() {
   ipcMain.on('find:query', withShell((s, query, opts) => s.find(query, opts)));
   ipcMain.on('find:stop', withShell((s) => s.stopFind()));
 
-  ipcMain.on('bookmark:toggle', withShell((s) => {
+  ipcMain.on('droplet:menu', withShell((s, id, x, y) => s.showDropletMenu(id, x, y)));
+  ipcMain.on('droplet:show-bar', withShell((s, on) => s.setDropletsVisible(on)));
+
+  ipcMain.on('droplet:toggle', withShell((s) => {
     const tab = s.activeTab;
     if (!tab) return;
     s.store.toggleBookmark({ url: tab.url, title: tab.title });
     s._broadcast();
   }));
-  ipcMain.on('bookmark:remove', withShell((s, id) => {
+  ipcMain.on('droplet:remove', withShell((s, id) => {
     s.store.removeBookmark(id);
     s._broadcast();
   }));

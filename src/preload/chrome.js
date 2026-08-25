@@ -57,9 +57,11 @@ contextBridge.exposeInMainWorld('cloud', {
     stop: () => ipcRenderer.send('find:stop')
   },
 
-  bookmarks: {
-    toggle: () => ipcRenderer.send('bookmark:toggle'),
-    remove: (id) => ipcRenderer.send('bookmark:remove', id)
+  droplets: {
+    toggle: () => ipcRenderer.send('droplet:toggle'),
+    remove: (id) => ipcRenderer.send('droplet:remove', id),
+    menu: (id, x, y) => ipcRenderer.send('droplet:menu', id, x, y),
+    showBar: (on) => ipcRenderer.send('droplet:show-bar', on)
   },
 
   passwords: {

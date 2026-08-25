@@ -211,12 +211,17 @@ function buildAppMenu(getShell, plugins = null) {
           click: withShell((s) => s.reopenClosedTab())
         },
         {
-          label: 'Show Bookmarks',
+          label: 'All Droplets',
           accelerator: 'CommandOrControl+Shift+O',
-          click: withShell((s) => s.newTab('stratus://bookmarks'))
+          click: withShell((s) => s.newTab('stratus://droplets'))
         },
         {
-          label: 'Bookmark This Page',
+          label: 'Show Droplet Bar',
+          accelerator: 'CommandOrControl+Shift+B',
+          click: withShell((s) => s.setDropletsVisible(s.store.get('showDroplets') === false))
+        },
+        {
+          label: 'Keep as Droplet',
           accelerator: 'CommandOrControl+D',
           click: withShell((s) => {
             const tab = s.activeTab;
@@ -248,13 +253,13 @@ function buildAppMenu(getShell, plugins = null) {
 /** The "..." toolbar button. A native popup so it is never clipped by the chrome. */
 function popupToolsMenu(shellRef, x, y) {
   const tab = shellRef.activeTab;
-  const bookmarked = tab ? shellRef.store.isBookmarked(tab.url) : false;
+  const kept = tab ? shellRef.store.isBookmarked(tab.url) : false;
 
   const menu = Menu.buildFromTemplate([
     { label: 'New tab', accelerator: 'Ctrl+T', click: () => shellRef.newTab() },
     { type: 'separator' },
     {
-      label: bookmarked ? 'Remove bookmark' : 'Bookmark this page',
+      label: kept ? 'Remove droplet' : 'Keep as droplet',
       accelerator: 'Ctrl+D',
       enabled: Boolean(tab),
       click: () => {
@@ -262,7 +267,12 @@ function popupToolsMenu(shellRef, x, y) {
         shellRef._broadcast();
       }
     },
-    { label: 'Bookmarks', accelerator: 'Ctrl+Shift+O', click: () => shellRef.newTab('stratus://bookmarks') },
+    {
+      label: shellRef.store.get('showDroplets') === false ? 'Show droplet bar' : 'Hide droplet bar',
+      accelerator: 'Ctrl+Shift+B',
+      click: () => shellRef.setDropletsVisible(shellRef.store.get('showDroplets') === false)
+    },
+    { label: 'All droplets', accelerator: 'Ctrl+Shift+O', click: () => shellRef.newTab('stratus://droplets') },
     { label: 'History', accelerator: 'Ctrl+H', click: () => shellRef.newTab('stratus://history') },
     { label: 'Settings', accelerator: 'Ctrl+,', click: () => shellRef.newTab('stratus://settings') },
     { type: 'separator' },

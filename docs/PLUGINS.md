@@ -40,7 +40,7 @@ Copy any of them as a starting point.
 | Folder | Shows how to |
 | --- | --- |
 | `plugins/quiet-reader/` | Inject a stylesheet and a script into pages, add a search keyword, and take a command from the menu |
-| `plugins/own-theme/` | Offer an editable theme — 39 colour controls and a toggle, with no plugin code at all |
+| `plugins/own-theme/` | Offer an editable theme — 40 colour controls and a toggle, with no plugin code at all |
 | `plugins/page-timeline/` | Add a toolbar button and a page of its own, and read browser data through the plugin bridge |
 
 ## What a plugin can contribute
@@ -125,7 +125,7 @@ the DOM. It **cannot**:
 
 - see the page's own JavaScript, or be seen by it
 - reach Node, `require`, or the file system
-- reach the profile: no settings, no passwords, no history, no bookmarks
+- reach the profile: no settings, no passwords, no history, no droplets
 - reach the browser's own pages — no stylesheet or script is ever applied to them
 - open a window, or run anything in the main process
 - reach the network except as the page it is running in already could

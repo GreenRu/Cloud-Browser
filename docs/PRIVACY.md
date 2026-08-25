@@ -27,7 +27,7 @@ committable by accident.
 | --- | --- |
 | `logins.json` | Saved logins. Usernames in the clear, **passwords only ever as ciphertext** |
 | `cards.json` | Saved cards. Brand, last four digits, name and expiry in the clear; **the number and the security code only ever as ciphertext** |
-| `state.json` | Preferences, bookmarks, history, the last session, window bounds, plugin settings |
+| `state.json` | Preferences, droplets (kept pages), history, the last session, window bounds, plugin settings |
 | `Local State` | Chromium's own state, including the key the vault is bound to |
 | `Cookies`, `Local Storage`, `IndexedDB`, `Network/` | What websites stored, exactly as any browser keeps it |
 | `Cache/`, `Code Cache/`, `GPUCache/` | Chromium's caches |

@@ -4,7 +4,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 /* ============================================================
    Bridge for the browser's own bundled pages (new tab, history,
-   bookmarks, settings, error).
+   droplets, settings, error).
    ============================================================ */
 
 const here = decodeURIComponent(location.pathname).replace(/\\/g, '/').toLowerCase();
@@ -51,8 +51,8 @@ if (isInternalPage) {
       clearBetween: (from, to) => ipcRenderer.invoke('history:clear-between', from, to),
       clear: () => ipcRenderer.send('history:clear')
     },
-    bookmarks: {
-      remove: (id) => ipcRenderer.send('bookmark:remove', id)
+    droplets: {
+      remove: (id) => ipcRenderer.send('droplet:remove', id)
     },
     sky: {
       list: () => ipcRenderer.invoke('sky:list'),

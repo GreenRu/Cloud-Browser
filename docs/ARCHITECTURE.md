@@ -31,7 +31,7 @@ pages (`src/pages/`), and pages belonging to plugins. Each gets a preload from
 | Page | Bridge | Can do |
 | --- | --- | --- |
 | A website | none | nothing beyond being a page |
-| One of the browser's own | `window.cloudPage` | navigate, settings, history, bookmarks, passwords, plugins |
+| One of the browser's own | `window.cloudPage` | navigate, settings, history, droplets, passwords, plugins |
 | A plugin's own | `window.cloudPlugin` | navigate, open a cloud, read the theme, read the trails |
 
 `contextIsolation` is on and `nodeIntegration` off everywhere, every bridge

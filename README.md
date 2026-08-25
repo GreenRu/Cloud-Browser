@@ -42,7 +42,7 @@ npm start
   the pointer, with a gap opening where it will land.
 - **A menu on every cloud**, drawn as a cloud itself. Right-click one for
   reload, duplicate, mute,
-  bookmark, copy address, move to top or bottom, reopen the last closed cloud,
+  keep as a droplet, copy address, move to top or bottom, reopen the last closed cloud,
   merge the ones you have picked or split a merged one, and close this / the
   others / everything below.
 - **No top chrome.** Address bar, navigation and menus all live in the sidebar,
@@ -55,7 +55,7 @@ npm start
 ### The address bar, and its bubble
 
 - **Omnibox** that tells a URL from a search query, with a connection badge
-  (secure / not secure / internal page) and a bookmark star.
+  (secure / not secure / internal page) and a droplet that keeps the page.
 - **A live preview** hangs off it as you type: a real view of wherever Enter
   would take you, in a card that names the destination. Press it and it grows
   into the page.
@@ -73,7 +73,9 @@ npm start
 - **History** at `stratus://history` (`Ctrl+H`) — grouped by day with per-day
   counts, filtered by text and by time range, with favicons, forget-one-page and
   clear-a-whole-day.
-- **Bookmarks** at `stratus://bookmarks` (`Ctrl+Shift+O`).
+- **Droplets** at `stratus://droplets` (`Ctrl+Shift+O`) — what other browsers
+  call bookmarks. A cloud leaves droplets behind.
+
 - **Settings** at `stratus://settings` (`Ctrl+,`) — search engine, home page,
   reopening the last session, page zoom, address-bar display, theme, saved
   logins, plugins, and browsing data.
@@ -94,6 +96,9 @@ npm start
 
 ### Kept for you
 
+- **Droplets** — kept pages, in a row above the page that `Ctrl+Shift+B` shows
+  and hides. Right-click one to open it, open it in a new cloud, copy its link
+  or delete it.
 - **Saved passwords**, encrypted with the OS keystore — see
   [docs/PRIVACY.md](docs/PRIVACY.md).
 - **Saved cards**, encrypted the same way. Only the last four digits and the
@@ -101,7 +106,7 @@ npm start
   cursor in a card field. Keeping the code on the back is **off by default**;
   see [The security code](docs/PRIVACY.md#the-security-code) for the one rule
   worth knowing about it.
-- **Bookmarks and history**, persisted to disk.
+- **History**, persisted to disk.
 - **Session restore** (optional): the clouds you had open come back next launch,
   as does the window position, size and sidebar width.
 - Downloads report progress and offer *Show in folder*.
@@ -130,7 +135,7 @@ runs until you ask for it, in **Settings → Plugins**.
 
 | Plugin | What it adds |
 | --- | --- |
-| **Make Your Own Theme** | A *Custom* entry in the theme list with every one of the interface's 39 colours editable, and a switch for whether websites are asked for their dark theme |
+| **Make Your Own Theme** | A *Custom* entry in the theme list with every one of the interface's 40 colours editable, and a switch for whether websites are asked for their dark theme |
 | **Page Timeline** | A button between back and forward, opening a branching map of where each cloud has been — including the paths you turned back from, which the browser's own history throws away |
 | **Quiet Reader** | A reading width you can toggle, and an `arch` keyword for the Internet Archive |
 
@@ -148,8 +153,9 @@ Writing your own is [docs/PLUGINS.md](docs/PLUGINS.md).
 | `Alt+←` / `Alt+→` / `Alt+Home` | Back / forward / home |
 | `Ctrl+R`, `Ctrl+Shift+R` | Reload, reload ignoring cache |
 | `Ctrl+F`, `Esc` | Find in page, close find / stop loading |
-| `Ctrl+D` | Bookmark this page |
-| `Ctrl+H`, `Ctrl+Shift+O` | History, bookmarks |
+| `Ctrl+D` | Keep this page as a droplet |
+| `Ctrl+Shift+B` | Show or hide the droplet bar |
+| `Ctrl+H`, `Ctrl+Shift+O` | History, droplets |
 | `Ctrl+=` / `Ctrl+-` / `Ctrl+0` | Zoom in / out / reset |
 | `Ctrl+,` | Settings |
 | `Ctrl+Shift+I`, `F12` | Developer tools for the page |
@@ -167,7 +173,7 @@ src/
     shell.js       the window: tab set, layout, previews, context menus, state
     tab.js         one tab = one WebContentsView, its state and its trail
     menu.js        application menu (the keyboard map) and the toolbar menu
-    store.js       JSON preferences, bookmarks, history in the user-data dir
+    store.js       JSON preferences, droplets, history in the user-data dir
     urls.js        URL vs. search parsing, shortcuts, stratus:// routing
     passwords.js   the encrypted login vault
     plugins.js     the plugin host: manifests, injection, themes, toolbar
@@ -179,7 +185,7 @@ src/
     bubble.js      the card drawn around that preview
   renderer/        the browser UI (sidebar, drawers, page card)
     cloud-tabs.js    cloud rendering, drag-to-reorder, closing and merging
-  pages/           new tab, history, bookmarks, settings, error, preview card
+  pages/           new tab, history, droplets, settings, error, preview card
   shared/          loaded by both the UI and the browser's own pages
     clouds.js        the cloud silhouette generator
     theme.js         applying a theme, built-in or from a plugin

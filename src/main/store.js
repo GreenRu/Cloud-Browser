@@ -23,7 +23,14 @@ const DEFAULTS = {
   window: { width: 1280, height: 820, x: null, y: null, maximized: false },
   sidebarWidth: 252,
   skyLinks: null,                     // { id, label, url, slot } - null means "not set yet"
+  /*
+   * Kept pages. The interface calls one a droplet - it is a cloud browser, and
+   * a droplet is what a cloud leaves behind. The key here stays `bookmarks`:
+   * it is what is already on disk, and it is what every other browser calls
+   * them, which is the language the importer has to speak.
+   */
   bookmarks: [],                      // { id, title, url, addedAt }
+  showDroplets: true,                 // whether the droplet bar is on show
   history: [],                        // { url, title, visitedAt }
   session: []                         // urls restored on launch
 };

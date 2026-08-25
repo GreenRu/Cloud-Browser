@@ -42,8 +42,8 @@ bridge?.onMenu?.((menu) => {
   }
 
   // A cloud, like everything else in the strip. Seeded by what the menu is
-  // for, so the same cloud's menu keeps the same shape each time it opens.
-  window.CloudShape.buildLobes(root, `menu-${menu.tabId}`, {
+  // for, so the same thing's menu keeps the same shape each time it opens.
+  window.CloudShape.buildLobes(root, `menu-${menu.seed}`, {
     width: root.offsetWidth,
     base: 30,
     spacing: 84,

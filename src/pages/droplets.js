@@ -5,20 +5,20 @@ const listRoot = document.getElementById('list');
 const countLabel = document.getElementById('count');
 const filterInput = document.getElementById('filter');
 
-let bookmarks = [];
+let droplets = [];
 
 function render() {
   const query = filterInput.value.trim().toLowerCase();
   const visible = query
-    ? bookmarks.filter(
-        (b) =>
-          (b.title || '').toLowerCase().includes(query) || (b.url || '').toLowerCase().includes(query)
+    ? droplets.filter(
+        (d) =>
+          (d.title || '').toLowerCase().includes(query) || (d.url || '').toLowerCase().includes(query)
       )
-    : bookmarks;
+    : droplets;
 
   countLabel.textContent = visible.length
-    ? `${visible.length} saved page${visible.length === 1 ? '' : 's'}`
-    : 'Nothing saved yet';
+    ? `${visible.length} droplet${visible.length === 1 ? '' : 's'}`
+    : 'Nothing kept yet';
 
   listRoot.replaceChildren();
 
@@ -26,38 +26,38 @@ function render() {
     const empty = document.createElement('div');
     empty.className = 'empty';
     empty.textContent = query
-      ? 'No bookmarks match that search.'
+      ? 'No droplets match that search.'
       : 'Press Ctrl+D on any page to keep it here.';
     listRoot.appendChild(empty);
     return;
   }
 
-  for (const bookmark of visible) {
+  for (const droplet of visible) {
     const row = document.createElement('div');
     row.className = 'row';
-    row.title = bookmark.url;
+    row.title = droplet.url;
 
     const title = document.createElement('span');
     title.className = 'row-title';
-    title.textContent = bookmark.title || bookmark.url;
+    title.textContent = droplet.title || droplet.url;
 
     const url = document.createElement('span');
     url.className = 'row-url';
-    url.textContent = bookmark.url;
+    url.textContent = droplet.url;
 
     const remove = document.createElement('button');
     remove.className = 'row-remove';
     remove.textContent = '×';
-    remove.title = 'Remove bookmark';
+    remove.title = 'Delete droplet';
     remove.addEventListener('click', (event) => {
       event.stopPropagation();
-      bridge?.bookmarks.remove(bookmark.id);
-      bookmarks = bookmarks.filter((b) => b.id !== bookmark.id);
+      bridge?.droplets.remove(droplet.id);
+      droplets = droplets.filter((d) => d.id !== droplet.id);
       render();
     });
 
     row.append(title, url, remove);
-    row.addEventListener('click', () => bridge?.navigate(bookmark.url));
+    row.addEventListener('click', () => bridge?.navigate(droplet.url));
     listRoot.appendChild(row);
   }
 }
@@ -68,7 +68,7 @@ async function load() {
   if (!bridge) return;
   const state = await bridge.getState();
   window.SkyTheme.apply({ base: state.themeBase, variables: state.pageThemeVars });
-  bookmarks = state.bookmarks || [];
+  droplets = state.droplets || [];
   render();
 }
 

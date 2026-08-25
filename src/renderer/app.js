@@ -19,7 +19,8 @@ const el = {
   omnibox: $('omnibox'),
   badge: $('omni-badge'),
   address: $('address'),
-  bookmark: $('bookmark'),
+  droplet: $('droplet'),
+  dropletBarToggle: $('droplet-bar-toggle'),
   findOpen: $('find-open'),
   menu: $('menu'),
   settings: $('settings'),
@@ -38,7 +39,7 @@ const el = {
   findPrev: $('find-prev'),
   findNext: $('find-next'),
   findClose: $('find-close'),
-  bookmarksBar: $('bookmarks-bar'),
+  dropletBar: $('droplet-bar'),
   savePassword: $('save-password'),
   savePasswordText: $('save-password-text'),
   savePasswordSave: $('save-password-save'),
@@ -72,8 +73,9 @@ const state = {
   tabs: [],
   activeId: null,
   theme: 'day',
-  bookmarks: [],
-  bookmarked: false,
+  droplets: [],
+  dropletKept: false,
+  showDroplets: true,
   sidebarWidth: 252,
   showFullUrl: true
 };
@@ -118,8 +120,15 @@ function render(next) {
 
   renderBadge(tab?.url || '');
 
-  el.bookmark.classList.toggle('on', Boolean(state.bookmarked));
-  el.bookmark.title = state.bookmarked ? 'Remove bookmark (Ctrl+D)' : 'Bookmark this page (Ctrl+D)';
+  el.droplet.classList.toggle('on', Boolean(state.dropletKept));
+  el.droplet.title = state.dropletKept
+    ? 'Remove this droplet (Ctrl+D)'
+    : 'Keep as a droplet (Ctrl+D)';
+
+  const showing = state.showDroplets !== false;
+  el.dropletBarToggle.classList.toggle('on', showing);
+  el.dropletBarToggle.setAttribute('aria-pressed', String(showing));
+  el.dropletBarToggle.title = showing ? 'Hide droplets (Ctrl+Shift+B)' : 'Show droplets (Ctrl+Shift+B)';
 
   const panes = tab?.panes || 1;
   el.splitClouds.hidden = panes < 2;
@@ -128,7 +137,7 @@ function render(next) {
     el.splitClouds.title = `Give each of these ${panes} pages its own cloud again`;
   }
 
-  renderBookmarks();
+  renderDroplets();
   reportContentBounds();
 }
 
@@ -172,32 +181,50 @@ function renderBadge(url) {
   }
 }
 
-function renderBookmarks() {
-  const list = state.bookmarks || [];
-  el.bookmarksBar.hidden = list.length === 0;
-  if (!list.length) {
-    el.bookmarksBar.replaceChildren();
+/**
+ * The row of kept pages.
+ *
+ * Whether it is on show is the button's business, not the list's: a bar that
+ * vanishes when the last droplet goes leaves the button looking broken. With it
+ * on and nothing kept, it says so instead.
+ */
+function renderDroplets() {
+  const list = state.droplets || [];
+  el.dropletBar.hidden = state.showDroplets === false;
+  if (el.dropletBar.hidden) {
+    el.dropletBar.replaceChildren();
     return;
   }
 
-  const nodes = list.slice(0, 24).map((bm) => {
+  if (!list.length) {
+    const empty = document.createElement('span');
+    empty.className = 'droplet-empty';
+    empty.textContent = 'No droplets yet - Ctrl+D keeps a page here.';
+    el.dropletBar.replaceChildren(empty);
+    return;
+  }
+
+  const nodes = list.slice(0, 24).map((droplet) => {
     const button = document.createElement('button');
-    button.className = 'bookmark';
-    button.title = `${bm.title}\n${bm.url}\nRight-click to remove`;
+    button.className = 'droplet-pill';
+    button.title = `${droplet.title}\n${droplet.url}`;
 
     const label = document.createElement('span');
-    label.textContent = bm.title || bm.url;
+    label.textContent = droplet.title || droplet.url;
     button.appendChild(label);
 
-    button.addEventListener('click', () => api.nav.go(bm.url));
-    button.addEventListener('contextmenu', (e) => {
-      e.preventDefault();
-      api.bookmarks.remove(bm.id);
+    button.addEventListener('click', () => api.nav.go(droplet.url));
+
+    // The menu is drawn by the browser, in a view of its own: this row sits
+    // under the page, so anything drawn here would be cut off by it.
+    button.addEventListener('contextmenu', (event) => {
+      event.preventDefault();
+      api.droplets.menu(droplet.id, Math.round(event.clientX), Math.round(event.clientY));
     });
     return button;
   });
 
-  el.bookmarksBar.replaceChildren(...nodes);
+  el.dropletBar.replaceChildren(...nodes);
 }
 
 /**
@@ -460,7 +487,10 @@ el.reload.addEventListener('click', () => {
   if (activeTab()?.loading) api.nav.stop();
   else api.nav.reload();
 });
-el.bookmark.addEventListener('click', () => api.bookmarks.toggle());
+el.droplet.addEventListener('click', () => api.droplets.toggle());
+el.dropletBarToggle.addEventListener('click', () => {
+  api.droplets.showBar(state.showDroplets === false);
+});
 el.findOpen.addEventListener('click', () => openFind());
 el.settings.addEventListener('click', () => api.tabs.create('stratus://settings'));
 el.menu.addEventListener('click', () => {
