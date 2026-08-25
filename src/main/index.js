@@ -29,6 +29,8 @@ const { DEFAULT_SHORTCUTS, SEARCH_ENGINES, normalizeInput, prettifyUrl, targetsF
 const { buildAppMenu, popupToolsMenu } = require('./menu');
 const { registerSky } = require('./sky');
 const { PluginHost } = require('./plugins');
+const { CardWallet } = require('./cards');
+const importer = require('./import');
 
 /*
  * The app's name decides where its profile lives, so it has to be set before
@@ -69,6 +71,7 @@ const shells = [];
 let store;
 let vault;
 let plugins;
+let cards;
 
 /** Permissions we grant silently. Everything else is denied until there is UI to ask. */
 const AUTO_GRANTED = new Set(['fullscreen', 'clipboard-sanitized-write', 'pointerLock']);
@@ -243,6 +246,116 @@ function registerIpc() {
   });
   ipcMain.on('app:open-menu', withShell((s, x, y) => popupToolsMenu(s, x, y)));
 
+  // --- saved cards -----------------------------------------------------------
+
+  ipcMain.handle('cards:list', () => ({
+    cards: cards.list(),
+    available: cards.available,
+    saveCards: store.get('saveCards') !== false,
+    keepsCvv: cards.keepsCvv
+  }));
+
+  ipcMain.handle('cards:save', (_event, card) => cards.save(card || {}));
+  ipcMain.handle('cards:reveal', (_event, id) => cards.reveal(id));
+  ipcMain.handle('cards:remove', (_event, id) => cards.remove(id));
+  ipcMain.handle('cards:clear', () => {
+    cards.clear();
+    return true;
+  });
+
+  /*
+   * The one setting here with a memory. Switching it off destroys every code
+   * held; switching it back on does not bring any of them back.
+   */
+  ipcMain.handle('cards:keep-cvv', (_event, on) => {
+    cards.setKeepCvv(on);
+    return { keepsCvv: cards.keepsCvv, cards: cards.list() };
+  });
+
+  ipcMain.handle('cards:forget-cvv', () => {
+    const gone = cards.forgetAllCvv();
+    return { forgotten: gone, cards: cards.list() };
+  });
+
+  // --- bringing things over from another browser -------------------------------
+
+  ipcMain.handle('import:sources', () => {
+    try {
+      return importer.findSources();
+    } catch (err) {
+      return [];
+    }
+  });
+
+  /** Bookmarks read straight out of another browser's own file. */
+  ipcMain.handle('import:bookmarks', (_event, id) => {
+    try {
+      const added = store.addBookmarks(importer.readSource(String(id)));
+      currentShell()?._broadcast();
+      return { ok: true, added };
+    } catch (err) {
+      return { ok: false, error: String(err.message || err) };
+    }
+  });
+
+  /**
+   * A file the other browser exported. Bookmarks as HTML, logins or cards as
+   * CSV - the door every browser leaves open for this, and the only one that
+   * works for passwords, which are sealed to the browser that saved them.
+   */
+  ipcMain.handle('import:file', async (_event, kind) => {
+    const filters = kind === 'bookmarks'
+      ? [{ name: 'Bookmarks', extensions: ['html', 'htm'] }]
+      : [{ name: 'Comma-separated values', extensions: ['csv'] }];
+
+    const picked = await dialog.showOpenDialog(currentShell()?.window, {
+      title: 'Choose the file the other browser exported',
+      properties: ['openFile'],
+      filters
+    });
+    if (picked.canceled || !picked.filePaths.length) return { ok: false, cancelled: true };
+
+    let text;
+    try {
+      text = fs.readFileSync(picked.filePaths[0], 'utf8');
+    } catch (err) {
+      return { ok: false, error: String(err.message || err) };
+    }
+
+    try {
+      if (kind === 'bookmarks') {
+        const added = store.addBookmarks(importer.readBookmarkHtml(text));
+        currentShell()?._broadcast();
+        return { ok: true, added };
+      }
+
+      if (kind === 'passwords') {
+        if (!vault.available) return { ok: false, error: 'no-keystore' };
+        let added = 0;
+        for (const entry of importer.readPasswordCsv(text)) {
+          const origin = PasswordVault.originOf(entry.url);
+          if (!origin) continue;
+          if (vault.save({ origin, username: entry.username, password: entry.password })) added += 1;
+        }
+        return { ok: true, added };
+      }
+
+      if (kind === 'cards') {
+        if (!cards.available) return { ok: false, error: 'no-keystore' };
+        let added = 0;
+        for (const card of importer.readCardCsv(text)) {
+          if (cards.save(card).ok) added += 1;
+        }
+        return { ok: true, added, cards: cards.list() };
+      }
+
+      return { ok: false, error: 'unknown kind' };
+    } finally {
+      // Whatever was read, it is not kept around in memory.
+      text = null;
+    }
+  });
+
   // --- plugins ---------------------------------------------------------------
 
   /** Everything installed, whether it loaded, and whether it is switched on. */
@@ -340,6 +453,9 @@ function registerIpc() {
     if (typeof patch.savePasswords === 'boolean') {
       store.set('savePasswords', patch.savePasswords);
     }
+    if (typeof patch.saveCards === 'boolean') {
+      store.set('saveCards', patch.saveCards);
+    }
     if (typeof patch.restoreSession === 'boolean') {
       store.set('restoreSession', patch.restoreSession);
     }
@@ -374,6 +490,36 @@ function registerIpc() {
   });
 
   ipcMain.on('passwords:resolve', withShell((s, action) => s.resolveSavePrompt(action)));
+
+  /*
+   * A checkout page asked, because someone put the cursor in a card field.
+   *
+   * The page says only that it asked; it names no card and gets no list. With
+   * more than one saved there is no way to know which is meant, so nothing is
+   * filled - the same rule the logins follow.
+   */
+  ipcMain.on('cards:wanted', (event) => {
+    if (!cards || !cards.available) return;
+    if (store.get('saveCards') === false) return;
+
+    const shellRef = currentShell();
+    // Only a real page. A built-in page or a preview has no business here.
+    if (!shellRef || !shellRef.isTabContents(event.sender)) return;
+    if (!/^https?:/i.test(event.sender.getURL())) return;
+
+    const saved = cards.list().filter((c) => !c.expired);
+    if (saved.length !== 1) return;
+
+    event.sender.send('cards:fill', cards.forFilling(saved[0].id));
+  });
+
+  /* A code that was typed by hand, which is what being asked for it means. */
+  ipcMain.on('cards:cvv-typed', (event, payload) => {
+    if (!cards || !payload) return;
+    const shellRef = currentShell();
+    if (!shellRef || !shellRef.isTabContents(event.sender)) return;
+    cards.rememberCvv(String(payload.id || ''), String(payload.cvv || ''));
+  });
 
   ipcMain.handle('passwords:list', () => vault.list());
   ipcMain.handle('passwords:reveal', (_event, id) => vault.reveal(id));
@@ -436,6 +582,7 @@ if (!app.requestSingleInstanceLock()) {
     store = new Store();
     vault = new PasswordVault();
     plugins = new PluginHost(store);
+    cards = new CardWallet(store);
     setPluginPages(plugins.pages());
     nativeTheme.themeSource = store.get('theme') === 'night' ? 'dark' : 'light';
     configureSession();

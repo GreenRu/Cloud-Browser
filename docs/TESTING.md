@@ -60,6 +60,25 @@ From [../PLAN.md](../PLAN.md), cheapest first:
 Every one of these was found the hard way. The full list, with evidence, is in
 [../PLAN.md](../PLAN.md).
 
+**A hidden window never gives its document focus.** `BaseWindow({ show: false })`
+is the obvious way to keep a suite out of the way, and anything that depends on
+focus — `focusin`, `:focus-within`, `document.activeElement` — then quietly never
+happens. The card-filling suite failed six assertions that way with nothing wrong
+in the code.
+
+**One throw stops the rest of the form.** Filling walks a list of fields, so an
+exception on the third leaves the first two filled and the remainder empty — which
+reads exactly like "the last fields were not recognised". The real cause was
+handing a `<select>` the `value` setter off `HTMLInputElement.prototype`, which
+throws. When some of a sequence worked, suspect a throw before suspecting the
+matching.
+
+**A word boundary is a backspace if something eats the backslash.** A patch
+script wrote `\b` into six regexes as byte `0x08`; the file parsed, the regexes
+were valid, and they matched nothing. `grep` shows them as if the backslash were
+simply missing, because the terminal obeys the backspace. `grep -cP '\x08' src`
+finds them, and `cat -A` shows them as `^H`.
+
 **Kill stray Electron instances before launching.** The single-instance lock
 silently hands the launch to an older process, so a stale instance reads stale
 state and the new code appears not to work. Worse: a stray window *covers* the
@@ -133,9 +152,11 @@ Worth reaching for when Electron itself will not start.
 
 ## Coverage as it stands
 
-Roughly 400 assertions across fifteen suites: the browser end to end, merge and
+Roughly 580 assertions across twenty suites: the browser end to end, merge and
 split, pane seams, the closing animation, the preview bubble in the chrome and
 in a page, multi-pane search, themes, the plugin host, the timeline, the sky,
-settings and history, and the password vault. Each was written against a
-specific piece of behaviour while it was being built, and most exist because
-something was once wrong in a way a screenshot did not show.
+settings and history, the password vault, the card wallet and its rule about the
+security code, reading another browser's bookmarks and exported files, filling a
+card into a real checkout, and the settings page that drives all of it. Each was
+written against a specific piece of behaviour while it was being built, and most
+exist because something was once wrong in a way a screenshot did not show.

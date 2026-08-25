@@ -77,6 +77,20 @@ if (isInternalPage) {
       ipcRenderer.on('cloud:theme', handler);
       return () => ipcRenderer.removeListener('cloud:theme', handler);
     },
+    cards: {
+      list: () => ipcRenderer.invoke('cards:list'),
+      save: (card) => ipcRenderer.invoke('cards:save', card),
+      reveal: (id) => ipcRenderer.invoke('cards:reveal', id),
+      remove: (id) => ipcRenderer.invoke('cards:remove', id),
+      clear: () => ipcRenderer.invoke('cards:clear'),
+      keepCvv: (on) => ipcRenderer.invoke('cards:keep-cvv', on),
+      forgetCvv: () => ipcRenderer.invoke('cards:forget-cvv')
+    },
+    transfer: {
+      sources: () => ipcRenderer.invoke('import:sources'),
+      bookmarks: (id) => ipcRenderer.invoke('import:bookmarks', id),
+      fromFile: (kind) => ipcRenderer.invoke('import:file', kind)
+    },
     passwords: {
       list: () => ipcRenderer.invoke('passwords:list'),
       reveal: (id) => ipcRenderer.invoke('passwords:reveal', id),
@@ -198,11 +212,13 @@ if (isWebPage && isTopFrame) {
 
   function setValue(input, value) {
     // Assign through the native setter so frameworks that patch the property
-    // (React and friends) still see the change.
-    const setter = Object.getOwnPropertyDescriptor(
-      input instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype,
-      'value'
-    )?.set;
+    // (React and friends) still see the change. The setter belongs to the
+    // element's own kind: handing a <select> the one off HTMLInputElement
+    // throws, and takes the rest of the form's filling down with it.
+    const proto = input instanceof HTMLSelectElement ? HTMLSelectElement.prototype
+      : input instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype
+        : HTMLInputElement.prototype;
+    const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
     setter ? setter.call(input, value) : (input.value = value);
     input.dispatchEvent(new Event('input', { bubbles: true }));
     input.dispatchEvent(new Event('change', { bubbles: true }));
@@ -216,4 +232,160 @@ if (isWebPage && isTopFrame) {
     if (username && !username.value && credential.username) setValue(username, credential.username);
     setValue(field, credential.password);
   });
+
+  /* --------------------------------------------------------------------------
+     Saved cards at a checkout.
+
+     Nothing happens until a card field is focused - a page cannot help itself
+     to a card by existing, and the browser never volunteers one. Even then the
+     page is only ever handed the values, never the store: it cannot list what
+     is saved, cannot ask for a card by number, and cannot ask twice for the
+     code on the back if the browser has decided it must be typed.
+     -------------------------------------------------------------------------- */
+
+  // The purpose of a field, from `autocomplete` where a checkout bothers with
+  // it, and from its name otherwise. Order matters: the more specific tests
+  // come first, since `cc-exp` is a prefix of two other things.
+  const CARD_KINDS = [
+    ['number', /\bcc-number\b/, /(card|cc)[-_ ]?(number|num)|cardnumber|creditcard/i],
+    ['cvv', /\bcc-csc\b/, /\b(cvv|cvc|csc|cvn|security[-_ ]?code|card[-_ ]?code)\b/i],
+    ['expMonth', /\bcc-exp-month\b/, /(exp|expiry|expiration)[-_ ]?(month|mm)\b|\bmonth\b/i],
+    ['expYear', /\bcc-exp-year\b/, /(exp|expiry|expiration)[-_ ]?(year|yy)\b|\byear\b/i],
+    ['exp', /\bcc-exp\b/, /\b(expiry|expiration|exp[-_ ]?date)\b/i],
+    ['holder', /\bcc-name\b/, /(card|cc)[-_ ]?(holder|name)|nameoncard/i]
+  ];
+
+  function kindOf(input) {
+    const auto = (input.autocomplete || input.getAttribute('autocomplete') || '').toLowerCase();
+    for (const [kind, byAutocomplete] of CARD_KINDS) {
+      if (byAutocomplete.test(auto)) return kind;
+    }
+    // A checkout that says nothing about itself. The label counts as a name
+    // here, because plenty of them put the only clue there.
+    const words = [
+      input.name, input.id, input.placeholder,
+      input.getAttribute('aria-label') || '',
+      input.labels && input.labels[0] ? input.labels[0].textContent : ''
+    ].join(' ');
+    for (const [kind, , byName] of CARD_KINDS) {
+      if (byName.test(words)) return kind;
+    }
+    return null;
+  }
+
+  /** Every card field in the same form, or on the page if there is no form. */
+  function cardFields(from) {
+    const scope = (from && from.form) || document;
+    const found = {};
+    for (const input of scope.querySelectorAll('input, select')) {
+      if (!isVisible(input)) continue;
+      const kind = kindOf(input);
+      if (kind && !found[kind]) found[kind] = input;
+    }
+    return found;
+  }
+
+  /**
+   * Set an expiry field that may be a dropdown, and may want its month either
+   * padded or not - `09` and `9` are both common, and so are `2030` and `30`.
+   * A text box takes the first form; a dropdown takes whichever it actually
+   * offers, by value or by the words in the option.
+   */
+  function chooseValue(field, candidates) {
+    if (field.tagName !== 'SELECT') {
+      setValue(field, candidates[0]);
+      return;
+    }
+    const options = [...field.options];
+    for (const candidate of candidates) {
+      const match = options.find((o) => o.value === candidate) ||
+        options.find((o) => o.textContent.trim() === candidate);
+      if (match) {
+        setValue(field, match.value);
+        return;
+      }
+    }
+    // A month dropdown that lists names rather than numbers.
+    const byPosition = options.filter((o) => o.value !== '');
+    const index = Number(candidates[candidates.length - 1]);
+    if (byPosition.length === 12 && index >= 1 && index <= 12) {
+      setValue(field, byPosition[index - 1].value);
+    }
+  }
+
+  // Which card was filled here, so a code typed afterwards can be attached to
+  // it. Kept in this world only; the page cannot read it.
+  let filledCard = null;
+
+  function fillCard(card) {
+    if (!card) return;
+    const fields = cardFields(document.activeElement);
+    if (!fields.number) return;
+
+    setValue(fields.number, card.number);
+    if (fields.holder && card.holder) setValue(fields.holder, card.holder);
+
+    const mm = String(card.expMonth).padStart(2, '0');
+    const yyyy = String(card.expYear);
+    if (fields.expMonth) chooseValue(fields.expMonth, [mm, String(card.expMonth)]);
+    if (fields.expYear) chooseValue(fields.expYear, [yyyy, yyyy.slice(-2)]);
+    if (fields.exp) setValue(fields.exp, `${mm} / ${yyyy}`);
+
+    filledCard = { id: card.id, field: fields.cvv || null };
+
+    if (fields.cvv) {
+      if (card.cvv) {
+        setValue(fields.cvv, card.cvv);
+      } else {
+        // The browser is not going to fill this one. Put the person in it
+        // rather than leaving them to discover the empty box themselves.
+        setValue(fields.cvv, '');
+        try {
+          fields.cvv.focus();
+        } catch {
+          /* a checkout may well refuse to be focused */
+        }
+      }
+    }
+  }
+
+  ipcRenderer.on('cards:fill', (_event, card) => fillCard(card));
+
+  // Focusing a card field is the ask. Nothing before that.
+  window.addEventListener(
+    'focusin',
+    (event) => {
+      const input = event.target;
+      if (!(input instanceof HTMLInputElement) || input.value) return;
+      const kind = kindOf(input);
+      if (kind !== 'number' && kind !== 'holder') return;
+      ipcRenderer.send('cards:wanted');
+    },
+    true
+  );
+
+  /*
+   * A code typed by hand is worth keeping, since typing it is exactly what the
+   * browser asked for. Only ever the code, only for the card just filled, and
+   * the main process still refuses it unless keeping codes is switched on.
+   */
+  function reportTypedCvv() {
+    if (!filledCard || !filledCard.field) return;
+    const code = String(filledCard.field.value || '').trim();
+    if (!/^[0-9]{3,4}$/.test(code)) return;
+    ipcRenderer.send('cards:cvv-typed', { id: filledCard.id, cvv: code });
+    filledCard = null;
+  }
+
+  window.addEventListener('submit', reportTypedCvv, true);
+  window.addEventListener(
+    'click',
+    (event) => {
+      const target = event.target instanceof Element
+        ? event.target.closest('button, input[type="submit"], [role="button"]')
+        : null;
+      if (target) reportTypedCvv();
+    },
+    true
+  );
 }

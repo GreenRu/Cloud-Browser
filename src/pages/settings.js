@@ -365,6 +365,221 @@ function applyTheme() {
   window.SkyTheme.apply({ base: settings.themeBase, variables: settings.pageThemeVars });
 }
 
+/* ------------------------------------------------------------ saved cards */
+
+const cardList = $('card-list');
+const cardNote = $('cards-note');
+const cardSheet = $('card-sheet');
+
+function renderCards(state) {
+  const { cards = [], available = false, saveCards = true, keepsCvv = false } = state || {};
+
+  $('save-cards').checked = saveCards;
+  $('save-cvv').checked = keepsCvv;
+  $('save-cvv').disabled = !saveCards;
+  $('card-cvv-field').hidden = !keepsCvv;
+
+  cardNote.textContent = !available
+    ? 'This system has no keystore, so cards cannot be saved. Nothing is ever written in the clear.'
+    : cards.length
+      ? `${cards.length} card${cards.length === 1 ? '' : 's'} saved.`
+      : 'No cards saved yet.';
+
+  cardList.replaceChildren();
+
+  for (const card of cards) {
+    const row = document.createElement('div');
+    row.className = 'row';
+
+    const cell = document.createElement('div');
+    cell.style.flex = '1 1 auto';
+    cell.style.minWidth = '0';
+
+    const line = document.createElement('div');
+    line.className = 'card-line row-title';
+
+    const name = document.createElement('span');
+    name.textContent = card.brand;
+
+    const dots = document.createElement('span');
+    dots.className = 'card-dots';
+    dots.textContent = `•••• ${card.last4}`;
+
+    line.append(name, dots);
+
+    // What it will actually do at a checkout, said plainly.
+    if (card.expired) {
+      const tag = document.createElement('span');
+      tag.className = 'tag warn';
+      tag.textContent = 'expired';
+      line.appendChild(tag);
+    }
+    const codeTag = document.createElement('span');
+    codeTag.className = 'tag';
+    codeTag.textContent = card.hasCvv ? 'code saved' : 'asks for code';
+    line.appendChild(codeTag);
+
+    const detail = document.createElement('div');
+    detail.className = 'row-url';
+    detail.textContent = [card.holder, `${String(card.expMonth).padStart(2, '0')}/${card.expYear}`]
+      .filter(Boolean).join(' · ');
+
+    cell.append(line, detail);
+
+    const show = document.createElement('button');
+    show.className = 'ghost-btn';
+    show.textContent = 'Show number';
+    show.addEventListener('click', async () => {
+      if (show.dataset.showing === 'yes') {
+        show.textContent = 'Show number';
+        delete show.dataset.showing;
+        detail.textContent = [card.holder, `${String(card.expMonth).padStart(2, '0')}/${card.expYear}`]
+          .filter(Boolean).join(' · ');
+        return;
+      }
+      const number = await bridge.cards.reveal(card.id);
+      if (!number) return;
+      detail.textContent = number.replace(/(.{4})/g, '$1 ').trim();
+      show.textContent = 'Hide';
+      show.dataset.showing = 'yes';
+      // Not left on screen indefinitely.
+      setTimeout(() => {
+        if (show.dataset.showing !== 'yes') return;
+        show.click();
+      }, 15000);
+    });
+
+    const remove = document.createElement('button');
+    remove.className = 'ghost-btn danger';
+    remove.textContent = 'Remove';
+    remove.addEventListener('click', async () => {
+      await bridge.cards.remove(card.id);
+      renderCards(await bridge.cards.list());
+    });
+
+    row.append(cell, show, remove);
+    cardList.appendChild(row);
+  }
+}
+
+$('save-cards').addEventListener('change', async (e) => {
+  await patch({ saveCards: e.target.checked });
+  renderCards(await bridge.cards.list());
+});
+
+// Switching this off destroys every code held, which the browser does, not this.
+$('save-cvv').addEventListener('change', async (e) => {
+  await bridge.cards.keepCvv(e.target.checked);
+  renderCards(await bridge.cards.list());
+});
+
+$('card-add').addEventListener('click', () => {
+  $('card-error').textContent = '';
+  for (const id of ['card-number', 'card-holder', 'card-month', 'card-year', 'card-cvv']) {
+    $(id).value = '';
+  }
+  cardSheet.hidden = false;
+  $('card-number').focus();
+});
+
+$('card-cancel').addEventListener('click', () => { cardSheet.hidden = true; });
+cardSheet.addEventListener('pointerdown', (e) => {
+  if (e.target === cardSheet) cardSheet.hidden = true;
+});
+
+$('card-form').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const result = await bridge.cards.save({
+    number: $('card-number').value,
+    holder: $('card-holder').value,
+    expMonth: $('card-month').value,
+    expYear: $('card-year').value,
+    cvv: $('card-cvv').value
+  });
+
+  if (!result || !result.ok) {
+    $('card-error').textContent = {
+      'no-keystore': 'This system has no keystore, so cards cannot be saved.',
+      'not-a-card': 'That does not look like a card number.',
+      'bad-expiry': 'Check the expiry month and year.'
+    }[result && result.reason] || 'That could not be saved.';
+    return;
+  }
+
+  cardSheet.hidden = true;
+  renderCards(await bridge.cards.list());
+});
+
+$('card-clear').addEventListener('click', async () => {
+  await bridge.cards.clear();
+  renderCards(await bridge.cards.list());
+});
+
+/* -------------------------------------------------------- bringing things over */
+
+const importNote = $('import-note');
+
+function renderSources(sources) {
+  const root = $('import-sources');
+  root.replaceChildren();
+
+  if (!sources.length) {
+    const empty = document.createElement('div');
+    empty.className = 'row';
+    empty.textContent = 'No other browsers found on this computer.';
+    root.appendChild(empty);
+    return;
+  }
+
+  for (const source of sources) {
+    const row = document.createElement('div');
+    row.className = 'row';
+
+    const cell = document.createElement('div');
+    cell.style.flex = '1 1 auto';
+    const title = document.createElement('div');
+    title.className = 'row-title';
+    title.textContent = source.browser;
+    const detail = document.createElement('div');
+    detail.className = 'row-url';
+    detail.textContent = `${source.profile} · ${source.count} bookmark${source.count === 1 ? '' : 's'}`;
+    cell.append(title, detail);
+
+    const take = document.createElement('button');
+    take.className = 'ghost-btn';
+    take.textContent = 'Bring bookmarks over';
+    take.addEventListener('click', async () => {
+      take.disabled = true;
+      const result = await bridge.transfer.bookmarks(source.id);
+      take.disabled = false;
+      importNote.textContent = result && result.ok
+        ? `${result.added} bookmark${result.added === 1 ? '' : 's'} brought over from ${source.browser}.`
+        : `Could not read that: ${(result && result.error) || 'unknown problem'}.`;
+    });
+
+    row.append(cell, take);
+    root.appendChild(row);
+  }
+}
+
+const fromFile = (kind, what) => async () => {
+  const result = await bridge.transfer.fromFile(kind);
+  if (!result || result.cancelled) return;
+  if (!result.ok) {
+    importNote.textContent = result.error === 'no-keystore'
+      ? 'This system has no keystore, so nothing secret can be saved.'
+      : `Could not read that file: ${result.error}.`;
+    return;
+  }
+  importNote.textContent = `${result.added} ${what}${result.added === 1 ? '' : 's'} brought over.`;
+  if (kind === 'cards') renderCards(await bridge.cards.list());
+  if (kind === 'passwords') renderPasswords();
+};
+
+$('import-bookmarks-file').addEventListener('click', fromFile('bookmarks', 'bookmark'));
+$('import-passwords-file').addEventListener('click', fromFile('passwords', 'login'));
+$('import-cards-file').addEventListener('click', fromFile('cards', 'card'));
+
 /* ---------------------------------------------------------------- plugins */
 
 const pluginList = document.getElementById('plugin-list');
@@ -459,6 +674,13 @@ async function load() {
     renderPlugins(await bridge.plugins.list());
   } catch {
     /* an older build of the browser simply has no plugin host */
+  }
+
+  try {
+    renderCards(await bridge.cards.list());
+    renderSources(await bridge.transfer.sources());
+  } catch {
+    /* likewise for the wallet */
   }
 }
 

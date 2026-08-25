@@ -96,10 +96,32 @@ npm start
 
 - **Saved passwords**, encrypted with the OS keystore — see
   [docs/PRIVACY.md](docs/PRIVACY.md).
+- **Saved cards**, encrypted the same way. Only the last four digits and the
+  expiry are kept in the clear, and a checkout is filled only once you put the
+  cursor in a card field. Keeping the code on the back is **off by default**;
+  see [The security code](docs/PRIVACY.md#the-security-code) for the one rule
+  worth knowing about it.
 - **Bookmarks and history**, persisted to disk.
 - **Session restore** (optional): the clouds you had open come back next launch,
   as does the window position, size and sidebar width.
 - Downloads report progress and offer *Show in folder*.
+
+### Bringing things over from another browser
+
+**Settings → Bring things over** finds Chrome, Edge, Brave, Vivaldi, Opera,
+Chromium and Firefox on this computer and reads their bookmarks straight out of
+their own files — nothing to export, and a second run adds nothing twice.
+
+Passwords are deliberately **not** read that way. They are sealed to the browser
+that saved them, and prising them out would mean doing what a password stealer
+does. Export them from that browser instead and read the file here; the same
+door takes cards.
+
+| From | Read as |
+| --- | --- |
+| Bookmarks | The browser's own file, or the HTML file every browser exports |
+| Passwords | A CSV exported from the other browser |
+| Cards | A CSV exported from the other browser |
 
 ### Plugins
 

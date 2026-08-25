@@ -166,6 +166,110 @@ button {
 .swatch input[type="color"]::-webkit-color-swatch-wrapper { padding: 2px; }
 .swatch input[type="color"]::-webkit-color-swatch { border: 0; border-radius: 6px; }
 
+/* A small form that opens over the page - adding a card, and anything else
+   that needs more than one field answered at once. */
+.sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  background: rgba(14, 32, 54, 0.32);
+}
+
+.sheet[hidden] { display: none; }
+
+.sheet form {
+  width: min(420px, calc(100vw - 48px));
+  padding: 22px;
+  border-radius: 22px;
+  background: var(--card-solid);
+  box-shadow: 0 24px 60px rgba(14, 32, 54, 0.38);
+}
+
+.sheet h3 {
+  margin: 0 0 16px;
+  font-family: var(--brand-font);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.sheet label {
+  display: block;
+  margin-bottom: 12px;
+  font-size: 11.5px;
+  font-weight: 650;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.sheet input {
+  display: block;
+  width: 100%;
+  margin-top: 5px;
+  height: 38px;
+  padding: 0 13px;
+  border: 1.5px solid var(--card-hover);
+  border-radius: 11px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  letter-spacing: 0;
+  text-transform: none;
+  outline: none;
+  transition: border-color 140ms ease;
+}
+
+.sheet input:focus { border-color: var(--accent); }
+
+.sheet-pair { display: flex; gap: 10px; }
+.sheet-pair label { flex: 1 1 0; }
+
+.sheet-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.sheet-row button {
+  height: 34px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease;
+}
+
+.sheet-row button:hover { background: var(--card-hover); color: var(--text); }
+.sheet-row button[type="submit"] { background: var(--accent); color: #fff; }
+.sheet-row button[type="submit"]:hover { filter: brightness(1.06); }
+
+/* A card in the list: what it is, and what it will and will not fill. */
+.card-line { display: flex; align-items: baseline; gap: 8px; }
+.card-dots { color: var(--text-dim); letter-spacing: 2px; }
+
+.tag {
+  flex: 0 0 auto;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--card-hover);
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.tag.warn { background: rgba(214, 84, 84, 0.16); color: #d65454; }
+
 /* A day of history: its name and count on the left, a way to forget the whole
    of it on the right. */
 .group-head {

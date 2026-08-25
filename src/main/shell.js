@@ -1225,6 +1225,12 @@ class BrowserShell {
     tab.webContents.send('passwords:fill', matches[0]);
   }
 
+  /** Whether some webContents is one of the open pages, rather than a preview,
+   *  a built-in page, or anything else that should never be filled. */
+  isTabContents(webContents) {
+    return [...this.tabs.values()].some((t) => !t.destroyed && t.webContents === webContents);
+  }
+
   /** A page submitted a login form; ask whether to remember it. */
   handleSubmittedLogin(webContents, { username, password }) {
     if (!this.store.get('savePasswords') || !password) return;

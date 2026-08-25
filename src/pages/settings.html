@@ -248,6 +248,90 @@
       </section>
 
       <section class="section">
+        <h2 class="section-title">Saved cards</h2>
+        <p class="section-note" id="cards-note"></p>
+
+        <div class="setting">
+          <div class="setting-label">
+            <b>Offer to save cards</b>
+            <small>Card numbers are encrypted with the same OS keystore as your passwords. Only the last four digits are kept in the clear.</small>
+          </div>
+          <div class="setting-control">
+            <label class="toggle">
+              <input type="checkbox" id="save-cards" />
+              <span></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="setting">
+          <div class="setting-label">
+            <b>Also keep the security code</b>
+            <small id="cvv-note">The three or four digits on the back. Turning this off destroys every code already kept — turning it back on does not bring them back, and each card asks once more before it is trusted again.</small>
+          </div>
+          <div class="setting-control">
+            <label class="toggle">
+              <input type="checkbox" id="save-cvv" />
+              <span></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="rows" id="card-list"></div>
+
+        <div class="toolbar-row">
+          <button class="ghost-btn" id="card-add">Add a card</button>
+          <button class="ghost-btn danger" id="card-clear">Remove all cards</button>
+        </div>
+
+        <div class="sheet" id="card-sheet" hidden>
+          <form id="card-form">
+            <h3>Add a card</h3>
+            <label>Card number
+              <input type="text" id="card-number" inputmode="numeric" autocomplete="off" spellcheck="false" placeholder="4111 1111 1111 1111" />
+            </label>
+            <label>Name on card
+              <input type="text" id="card-holder" autocomplete="off" />
+            </label>
+            <div class="sheet-pair">
+              <label>Month
+                <input type="text" id="card-month" inputmode="numeric" autocomplete="off" placeholder="09" />
+              </label>
+              <label>Year
+                <input type="text" id="card-year" inputmode="numeric" autocomplete="off" placeholder="2030" />
+              </label>
+              <label id="card-cvv-field">Security code
+                <input type="text" id="card-cvv" inputmode="numeric" autocomplete="off" placeholder="123" />
+              </label>
+            </div>
+            <p class="section-note" id="card-error"></p>
+            <div class="sheet-row">
+              <button type="button" id="card-cancel">Cancel</button>
+              <button type="submit">Save card</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2 class="section-title">Bring things over</h2>
+        <p class="section-note">
+          Bookmarks can be read straight out of another browser. Passwords cannot:
+          they are sealed to the browser that saved them, so export them from there
+          and read the file here — which is the door every browser leaves open for it.
+        </p>
+
+        <div class="rows" id="import-sources"></div>
+
+        <div class="toolbar-row">
+          <button class="ghost-btn" id="import-bookmarks-file">Bookmarks from an HTML file</button>
+          <button class="ghost-btn" id="import-passwords-file">Passwords from a CSV file</button>
+          <button class="ghost-btn" id="import-cards-file">Cards from a CSV file</button>
+        </div>
+        <p class="section-note" id="import-note"></p>
+      </section>
+
+      <section class="section">
         <h2 class="section-title">Plugins</h2>
         <p class="section-note" id="plugin-note"></p>
         <div class="rows" id="plugin-list"></div>

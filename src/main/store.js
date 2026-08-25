@@ -11,6 +11,9 @@ const DEFAULTS = {
   searchEngine: 'google',
   shortcuts: { ...DEFAULT_SHORTCUTS },
   savePasswords: true,
+  saveCards: true,                    // offer to keep payment cards at all
+  saveCardCvv: false,                 // and the code on the back with them
+  cvvDisabledAt: 0,                   // when that was last switched off - see cards.js
   pluginThemeValues: {},              // { 'plugin:theme': { field: value } }
   enabledPlugins: [],                 // plugin ids switched *on* - nothing runs unasked
   showFullUrl: true,
@@ -156,6 +159,36 @@ class Store {
 
   isBookmarked(url) {
     return this.data.bookmarks.some((b) => b.url === url);
+  }
+
+  /**
+   * Add several bookmarks at once, skipping any address already kept.
+   *
+   * Used by the importer, which routinely offers hundreds and should not
+   * produce a second copy of everything on a second run.
+   */
+  addBookmarks(list) {
+    const have = new Set(this.data.bookmarks.map((b) => b.url));
+    const added = [];
+
+    for (const entry of Array.isArray(list) ? list : []) {
+      const url = String(entry && entry.url ? entry.url : '');
+      if (!/^https?:\/\//i.test(url) || have.has(url)) continue;
+      have.add(url);
+      added.push({
+        id: `bm-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        title: String(entry.title || url).slice(0, 200),
+        url,
+        folder: String(entry.folder || '').slice(0, 200),
+        addedAt: Date.now()
+      });
+    }
+
+    if (added.length) {
+      this.data.bookmarks.unshift(...added);
+      this.save();
+    }
+    return added.length;
   }
 
   toggleBookmark({ url, title }) {
