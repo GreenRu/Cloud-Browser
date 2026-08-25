@@ -290,15 +290,72 @@ class Tab {
 
     wc.on('context-menu', (_e, params) => onContextMenu?.(this, params));
 
+    /*
+     * Opening a window somewhere else.
+     *
+     * Denying this looks like the tidy answer - popups become clouds, never
+     * stray OS windows - and it quietly breaks downloading. Chromium counts a
+     * denied window-open as a blocked popup, and a link that opens a tab *and*
+     * starts a download on the same click loses the download along with it.
+     *
+     * Measured on obsproject.com, whose Download Installer link does exactly
+     * that: denying gives no download at all, however the link is clicked;
+     * allowing gives the installer. So the window is allowed, and never shown.
+     * What happens to it next is `did-create-window` below.
+     */
     wc.setWindowOpenHandler(({ url, disposition }) => {
       if (disposition === 'save-to-disk') return { action: 'allow' };
-      // Popups and target=_blank links become tabs, never stray OS windows.
-      if (/^https?:/i.test(url)) {
-        onOpenTab?.(url, { background: disposition === 'background-tab' });
-      } else if (/^(mailto|tel):/i.test(url)) {
+
+      if (/^(mailto|tel):/i.test(url)) {
         shell.openExternal(url);
+        return { action: 'deny' };
       }
-      return { action: 'deny' };
+      if (!/^https?:/i.test(url)) return { action: 'deny' };
+
+      return { action: 'allow', overrideBrowserWindowOptions: { show: false } };
+    });
+
+    /*
+     * The window that was allowed, dealt with before anyone sees it.
+     *
+     * A real page has its address moved into a cloud. A link that turned out to
+     * be a download never loads anything at all, so there is nothing to move -
+     * the download is already the session's business by then, and the empty
+     * window is simply closed.
+     */
+    wc.on('did-create-window', (child, { url, disposition }) => {
+      const background = disposition === 'background-tab';
+      const kid = child.webContents;
+      let done = false;
+
+      const finish = (target) => {
+        if (done) return;
+        done = true;
+        if (target) onOpenTab?.(target, { background });
+        if (!child.isDestroyed()) child.destroy();
+      };
+
+      // A popup may not open popups of its own; it is not going to live long
+      // enough to have any business doing so.
+      kid.setWindowOpenHandler(() => ({ action: 'deny' }));
+
+      kid.once('did-finish-load', () => finish(kid.getURL() || url));
+      kid.once('did-fail-load', () => finish(null));
+
+      /*
+       * A navigation that turned into a download commits nothing: the window is
+       * left with no address at all, and neither of the events above is
+       * guaranteed to arrive. Anything still blank shortly after opening was a
+       * download, and the window is closed with nothing moved into a cloud.
+       */
+      setTimeout(() => {
+        if (done || child.isDestroyed()) return;
+        const at = kid.getURL();
+        if (!at || at === 'about:blank') finish(null);
+      }, 1200);
+
+      // And whatever else happens, no window is left lying about off screen.
+      setTimeout(() => finish(kid.isDestroyed() ? null : (kid.getURL() || url)), 6000);
     });
   }
 

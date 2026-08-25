@@ -107,10 +107,11 @@ follow. What they share, and what any of them may not do, is the
   or delete it.
 - **Flights** — what a download is called here, because it arrives. Each one
   crosses the sky as a meteor while it comes down; point at it and the file
-  names itself. The plane on the toolbar says how many are in the air and opens
-  a panel to hold, resume, cancel or retry them, and `stratus://flights`
-  (`Ctrl+J`) is the whole record, kept between launches. A name already in use is
-  numbered rather than written over.
+  names itself. The asteroid on the toolbar says how many are in the air and
+  opens a panel to hold, resume, cancel or retry them — press it again to put
+  the panel away. `stratus://flights` (`Ctrl+J`) is the whole record, kept
+  between launches. A name already in use is numbered rather than written
+  over.
 - **Saved passwords**, encrypted with the OS keystore — see
   [docs/PRIVACY.md](docs/PRIVACY.md).
 - **Saved cards**, encrypted the same way. Only the last four digits and the

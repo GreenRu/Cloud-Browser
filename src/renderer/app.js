@@ -935,8 +935,23 @@ function hideFlightLabel() {
   el.meteorLabel.hidden = true;
 }
 
-/** The panel, hanging from the plane. A view of its own; see the shell. */
+/**
+ * The panel, hanging from the asteroid. A view of its own; see the shell.
+ *
+ * Pressing the button while the panel is up means put it away. Left to timing
+ * it does not read that way: the press takes the keyboard off the panel, which
+ * closes it, and then opens it again - a flicker rather than a toggle. So the
+ * browser says whether the panel is up and the button acts on that.
+ */
+let panelUp = false;
+api.on.flightsPanelOpen(() => { panelUp = true; });
+api.on.flightsPanelClosed(() => { panelUp = false; });
+
 function openFlights() {
+  if (panelUp) {
+    api.flights.panelClose();
+    return;
+  }
   const box = el.flights.getBoundingClientRect();
   api.flights.panel(Math.round(box.left), Math.round(box.bottom + 6));
 }

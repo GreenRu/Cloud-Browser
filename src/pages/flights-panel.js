@@ -13,7 +13,7 @@ const list = document.getElementById('list');
 const panel = document.getElementById('panel');
 
 const ICON = {
-  flying: '<svg viewBox="0 0 24 24"><path d="M2.5 13.5 21 5l-4 8 4 8-18.5-8.5Z"/></svg>',
+  flying: '<svg viewBox="0 0 24 24"><path d="M13.4 2.9 19.6 6l1.5 6.4-3.9 5.6-6.6 1.4-5.2-3.6L3 8.9l4.4-4.7Z"/></svg>',
   held: '<svg viewBox="0 0 24 24"><path d="M9 6v12M15 6v12"/></svg>',
   landed: '<svg viewBox="0 0 24 24"><path d="M5 12.5 10 17l9-10"/></svg>',
   stalled: '<svg viewBox="0 0 24 24"><path d="M12 7v6M12 16.5v.5"/><circle cx="12" cy="12" r="8.5"/></svg>',
@@ -158,7 +158,7 @@ function draw(state) {
 /**
  * The browser cannot know how big this turned out until it is drawn, so it is
  * told - and where the card sits inside the view, so the panel lands under the
- * button rather than under the room left for its shadow.
+ * button rather than under the margin around it.
  */
 function measure() {
   const style = getComputedStyle(document.body);

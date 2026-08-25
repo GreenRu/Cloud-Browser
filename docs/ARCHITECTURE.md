@@ -184,6 +184,20 @@ when a page finishes loading**, because the page takes focus back the moment it
 does. Blur within the first fraction of a second after opening is ignored, or
 the panel appears not to open at all.
 
+**Denying a window-open breaks downloading.** `setWindowOpenHandler` returning
+`deny` is the tidy-looking way to turn popups into clouds, and it silently loses
+files: Chromium counts the denial as a blocked popup, and a link that opens a
+tab *and* starts a download on the same click loses the download along with it.
+Measured on obsproject.com, whose Download Installer link does exactly that -
+denying gave no download at all, however the link was clicked; allowing gave the
+installer.
+
+So the window is allowed and never shown. `did-create-window` then deals with it
+before anyone sees it: a real page has its address moved into a cloud, and a
+window that turns out to be a download commits no address at all and is simply
+closed. That also stopped `target="_blank"` downloads leaving a blank cloud
+behind, which they had been doing since long before flights existed.
+
 Progress is reported at most twice a second. `overall()` returns one fraction
 for the taskbar - or `2`, which Electron reads as an indeterminate bar, when a
 server never said how big the file was.
@@ -279,6 +293,10 @@ with the evidence.
 - **An occluded window pauses its CSS animations and throttles its timers.** A
   stray Electron window left over from an earlier run will make timing
   assertions fail with nothing wrong in the code.
+- **Denying a `setWindowOpenHandler` request blocks the link's own navigation
+  too.** Chromium treats the denial as a blocked popup and suppresses whatever
+  else that click was going to do - which, on a download link, is the download.
+  Allow it, keep the window hidden, and deal with it in `did-create-window`.
 - **A suite that builds the shell by hand never boots the app.** Every suite
   constructs `BrowserShell` directly, so none of them runs `src/main/index.js`.
   Run `npx electron .` and read the output.

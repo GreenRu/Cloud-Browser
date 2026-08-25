@@ -1391,12 +1391,13 @@ body.resizing-panes { cursor: col-resize; }
 #flights { position: relative; }
 #flights.flying { opacity: 1; }
 
-/* It taxis when something is in the air: enough to notice, not enough to nag. */
-#flights.flying svg { animation: plane-taxi 2.6s ease-in-out infinite; }
+/* It turns while something is in the air, the way a rock does on its way down:
+   enough to notice out of the corner of an eye, not enough to nag. */
+#flights.flying svg { animation: asteroid-tumble 7s linear infinite; }
 
-@keyframes plane-taxi {
-  0%, 100% { transform: translateX(0); }
-  50% { transform: translateX(2px) translateY(-1px); }
+@keyframes asteroid-tumble {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .sidebar.collapsed #flights { display: none; }

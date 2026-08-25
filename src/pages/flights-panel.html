@@ -11,9 +11,12 @@
        *
        * A view of its own, for the same reason the cloud menu is one: it hangs
        * down from a button in the sidebar, straight into the page, and the
-       * chrome cannot draw there. The body is transparent and padded so the
-       * card's shadow has somewhere to fall rather than being clipped at the
-       * view's edge.
+       * chrome cannot draw there.
+       *
+       * It carries no shadow. A view is a rectangle of its own, so a shadow
+       * needs padding around the card to fall into, and that padding is empty
+       * space the panel cannot be clicked through - it reads as the panel
+       * missing its own edge. A hairline does the same job honestly.
        */
       :root {
         --bubble: #ffffff;
@@ -51,15 +54,15 @@
         cursor: default;
       }
 
-      /* Room for the shadow to fall into. */
-      body { padding: 6px 22px 22px; }
+      /* No shadow to leave room for; just enough that the edge is not clipped. */
+      body { padding: 2px; }
 
       .panel {
         width: 340px;
         padding: 8px;
         border-radius: 20px;
         background: var(--bubble);
-        box-shadow: 0 20px 46px rgba(14, 32, 54, 0.30);
+        border: 1px solid var(--line);
         animation: panel-in 150ms cubic-bezier(0.22, 1.6, 0.4, 1) both;
       }
 

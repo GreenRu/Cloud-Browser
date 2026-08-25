@@ -63,7 +63,8 @@ contextBridge.exposeInMainWorld('cloud', {
     act: (action, id) => ipcRenderer.invoke('flights:act', action, id),
     chooseFolder: () => ipcRenderer.invoke('flights:choose-folder'),
     useDefaultFolder: () => ipcRenderer.invoke('flights:use-default-folder'),
-    panel: (x, y) => ipcRenderer.send('flights:panel', x, y)
+    panel: (x, y) => ipcRenderer.send('flights:panel', x, y),
+    panelClose: () => ipcRenderer.send('flights:panel-close')
   },
 
   droplets: {
@@ -99,6 +100,8 @@ contextBridge.exposeInMainWorld('cloud', {
     previewTarget: listen('shell:preview-target'),
     previewExpanding: listen('shell:preview-expanding'),
     fullScreen: listen('shell:full-screen'),
-    flights: listen('flights:changed')
+    flights: listen('flights:changed'),
+    flightsPanelOpen: listen('flights:panel-open'),
+    flightsPanelClosed: listen('flights:panel-closed')
   }
 });

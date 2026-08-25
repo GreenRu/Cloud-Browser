@@ -810,10 +810,14 @@ class BrowserShell {
     this.flightsView.setVisible(true);
     this.flightsShownAt = Date.now();
     this.flightsView.webContents.focus();
+    // The button needs to know, so pressing it again puts the panel away rather
+    // than closing and opening it in one motion.
+    this.send('flights:panel-open');
   }
 
   hideFlightsPanel() {
     this.flightsOpen = null;
+    this.send('flights:panel-closed');
     if (!this.flightsView || this.flightsView.webContents.isDestroyed()) return;
     if (!this.flightsView.getBounds().width) return;
     this.flightsView.setVisible(false);
