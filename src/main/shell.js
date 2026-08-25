@@ -106,6 +106,8 @@ class BrowserShell {
     this.frameView = null;
     this.frameAttached = false;
     this.menuView = null;
+    this.flightsView = null;
+    this.flightsOpen = null;
     this.menuOpen = null;   // { id, selected, x, y } while one is up
     this.fullScreen = false;
 
@@ -169,6 +171,7 @@ class BrowserShell {
         // Last, so it is over everything, and now, so its page is loaded long
         // before anyone right-clicks a cloud.
         this._ensureCloudMenu();
+        this._ensureFlightsPanel();
       }
     });
 
@@ -732,6 +735,123 @@ class BrowserShell {
     return this.menuView;
   }
 
+  /**
+   * The view the flights panel is drawn in.
+   *
+   * A view for the same reason the menu is one: it hangs down from a button in
+   * the sidebar, straight into the page, and the chrome cannot draw there.
+   * Unlike the menu it stays up while things change, so it is handed the whole
+   * state whenever anything moves rather than once when it opens.
+   */
+  _ensureFlightsPanel() {
+    if (this.flightsView && !this.flightsView.webContents.isDestroyed()) return this.flightsView;
+
+    this.flightsView = new WebContentsView({
+      webPreferences: {
+        preload: path.join(__dirname, '..', 'preload', 'flights.js'),
+        contextIsolation: true,
+        nodeIntegration: false,
+        sandbox: true
+      }
+    });
+    this.flightsView.setBackgroundColor('#00000000');
+
+    const wc = this.flightsView.webContents;
+    wc.setWindowOpenHandler(() => ({ action: 'deny' }));
+    wc.on('will-navigate', (event) => event.preventDefault());
+    /*
+     * Losing the keyboard means somebody clicked elsewhere, and the panel
+     * should go - but not in the instant it opens. A page finishing its load
+     * takes focus back, and a panel that shuts because a page loaded is a panel
+     * that appears not to open at all.
+     */
+    wc.on('blur', () => setTimeout(() => {
+      if (Date.now() - (this.flightsShownAt || 0) < 400) return;
+      this.hideFlightsPanel();
+    }, 0));
+
+    this.flightsReady = new Promise((resolve) => wc.once('did-finish-load', resolve));
+    wc.loadFile(path.join(__dirname, '..', 'pages', 'flights-panel.html')).catch(() => {});
+
+    this.flightsView.setVisible(false);
+    this.window.contentView.addChildView(this.flightsView);
+    return this.flightsView;
+  }
+
+  showFlightsPanel(x, y) {
+    if (this.window.isDestroyed()) return;
+    const view = this._ensureFlightsPanel();
+    this.flightsOpen = { x, y };
+    view.setBounds({ x: 0, y: 0, width: 1, height: 1 });
+    this.flightsReady.then(() => {
+      if (this.flightsOpen && !view.webContents.isDestroyed()) {
+        view.webContents.send('flights:show', { base: this.themeState().base });
+      }
+    });
+  }
+
+  /** Placed under the button that opened it, and pulled back inside the window. */
+  placeFlightsPanel(size) {
+    if (!this.flightsOpen || !this.flightsView || this.window.isDestroyed() || !size) return;
+    const [w, h] = this.window.getContentSize();
+    const { x, y } = this.flightsOpen;
+    const width = Math.min(Math.round(size.width), w);
+    const height = Math.min(Math.round(size.height), h);
+
+    this.flightsView.setBounds({
+      x: Math.max(0, Math.min(Math.round(x - (size.offsetX || 0)), w - width)),
+      y: Math.max(0, Math.min(Math.round(y - (size.offsetY || 0)), h - height)),
+      width,
+      height
+    });
+
+    this.window.contentView.removeChildView(this.flightsView);
+    this.window.contentView.addChildView(this.flightsView);
+    this.flightsView.setVisible(true);
+    this.flightsShownAt = Date.now();
+    this.flightsView.webContents.focus();
+  }
+
+  hideFlightsPanel() {
+    this.flightsOpen = null;
+    if (!this.flightsView || this.flightsView.webContents.isDestroyed()) return;
+    if (!this.flightsView.getBounds().width) return;
+    this.flightsView.setVisible(false);
+    this.flightsView.setBounds({ x: 0, y: 0, width: 0, height: 0 });
+    const tab = this.activeTab;
+    if (tab && !tab.destroyed) tab.webContents.focus();
+  }
+
+  /** The taskbar button fills as things come down. -1 takes the bar away. */
+  showFlightProgress(fraction) {
+    if (this.window.isDestroyed()) return;
+    try {
+      this.window.setProgressBar(fraction);
+    } catch {
+      // Not every platform draws one, and none of them need to.
+    }
+  }
+
+  /**
+   * Whatever is showing flights has changed: the panel, and any page of them.
+   *
+   * Pages normally get a knock at the door with nothing in it, so that nothing
+   * about one cloud leaks into another. Flights are not a cloud's business -
+   * they belong to the browser, like history - and progress that had to be
+   * fetched twice a second would be a round trip for every frame.
+   */
+  sendFlights(state) {
+    if (this.flightsView && !this.flightsView.webContents.isDestroyed()) {
+      this.flightsView.webContents.send('flights:state', state);
+    }
+    for (const tab of this.tabs.values()) {
+      if (tab.destroyed) continue;
+      for (const view of tab.views) {
+        if (!view.webContents.isDestroyed()) view.webContents.send('flights:changed', state);
+      }
+    }
+  }
+
   /** Open a cloud's menu at a point in the window. */
   showCloudMenu(id, x, y, selected = []) {
     this._showMenu({ kind: 'cloud', id, selected }, this.tabMenu(id, selected), x, y);
@@ -1247,6 +1367,19 @@ class BrowserShell {
       this.menuView.webContents.close();
     }
     this.menuView = null;
+
+    if (this.flightsView && !this.flightsView.webContents.isDestroyed()) {
+      if (!this.window.isDestroyed()) {
+        try {
+          this.window.contentView.removeChildView(this.flightsView);
+        } catch {
+          // Already detached.
+        }
+      }
+      this.flightsView.webContents.close();
+    }
+    this.flightsView = null;
+
     for (const owner of [...this.previews.keys()]) this._dropPreview(owner);
 
     if (this.frameView && !this.frameView.webContents.isDestroyed()) {

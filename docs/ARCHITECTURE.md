@@ -157,6 +157,37 @@ about the other clouds leaks into a page that never asked.
 Intents go back the other way over an explicitly enumerated channel list. The
 renderer never mutates browsing state directly.
 
+## Flights
+
+A download is called a flight, because it arrives. `src/main/flights.js` owns
+every live one: the renderer names a flight by its id and asks for something to
+be done to it, and never holds a `DownloadItem` or names a path.
+
+Two things about the interface are decided by the law above, not by taste.
+
+**The meteor can only fly where the chrome is.** A file on its way down crosses
+the sky as a meteor, and the sky it crosses is the strip above the page and the
+sidebar column - the two parts of the window a page view does not cover. The
+path is measured from where the page actually is (`meteorPath()` in the
+renderer) and rebuilt whenever that moves, because a meteor routed across the
+middle of the window would be behind the page and simply not there. The suite
+asserts that no point on the path lands inside the page's rectangle.
+
+**The panel is its own view.** It hangs down from a button in the sidebar,
+straight into the page area, so it cannot be chrome. Unlike the cloud menu it
+stays up while things change, so it is handed the whole state whenever anything
+moves rather than once when it opens - and it is placed only after it has
+measured itself and said how big it turned out.
+
+One thing about it was learned the hard way: **a panel that hides on blur hides
+when a page finishes loading**, because the page takes focus back the moment it
+does. Blur within the first fraction of a second after opening is ignored, or
+the panel appears not to open at all.
+
+Progress is reported at most twice a second. `overall()` returns one fraction
+for the taskbar - or `2`, which Electron reads as an indeterminate bar, when a
+server never said how big the file was.
+
 ## Secrets: logins and cards
 
 Both stores follow one rule: every secret is encrypted with Electron's

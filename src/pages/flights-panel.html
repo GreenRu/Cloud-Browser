@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy"
+          content="default-src 'none'; style-src 'self' 'unsafe-inline'; script-src 'self';" />
+    <title>Flights</title>
+    <style>
+      /*
+       * What is in the air, and what has just landed.
+       *
+       * A view of its own, for the same reason the cloud menu is one: it hangs
+       * down from a button in the sidebar, straight into the page, and the
+       * chrome cannot draw there. The body is transparent and padded so the
+       * card's shadow has somewhere to fall rather than being clipped at the
+       * view's edge.
+       */
+      :root {
+        --bubble: #ffffff;
+        --text: #22364c;
+        --text-dim: #5f7a96;
+        --hover: rgba(15, 23, 42, 0.06);
+        --line: rgba(15, 23, 42, 0.10);
+        --accent: #2472cf;
+        --danger: #d94a4a;
+        --track: rgba(15, 23, 42, 0.10);
+      }
+
+      [data-theme="night"] {
+        --bubble: #1b2740;
+        --text: #dbe6f6;
+        --text-dim: #8299b9;
+        --hover: rgba(255, 255, 255, 0.08);
+        --line: rgba(255, 255, 255, 0.10);
+        --accent: #6aa9ff;
+        --danger: #ff6b6b;
+        --track: rgba(255, 255, 255, 0.14);
+      }
+
+      * { box-sizing: border-box; }
+
+      html, body {
+        margin: 0;
+        height: 100%;
+        background: transparent;
+        overflow: hidden;
+        font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+        color: var(--text);
+        user-select: none;
+        -webkit-user-select: none;
+        cursor: default;
+      }
+
+      /* Room for the shadow to fall into. */
+      body { padding: 6px 22px 22px; }
+
+      .panel {
+        width: 340px;
+        padding: 8px;
+        border-radius: 20px;
+        background: var(--bubble);
+        box-shadow: 0 20px 46px rgba(14, 32, 54, 0.30);
+        animation: panel-in 150ms cubic-bezier(0.22, 1.6, 0.4, 1) both;
+      }
+
+      @keyframes panel-in {
+        from { opacity: 0; transform: scale(0.96) translateY(-8px); }
+        to { opacity: 1; transform: none; }
+      }
+
+      .head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px 8px 8px;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.3px;
+        text-transform: uppercase;
+        color: var(--text-dim);
+      }
+
+      .head .grow { flex: 1 1 auto; }
+
+      button {
+        border: 0;
+        background: none;
+        font: inherit;
+        color: inherit;
+        cursor: pointer;
+      }
+
+      .link {
+        font-size: 11.5px;
+        font-weight: 650;
+        text-transform: none;
+        letter-spacing: 0;
+        color: var(--accent);
+        padding: 2px 6px;
+        border-radius: 8px;
+      }
+
+      .link:hover { background: var(--hover); }
+
+      .list { max-height: 340px; overflow-y: auto; }
+
+      .flight {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px;
+        border-radius: 12px;
+      }
+
+      .flight:hover { background: var(--hover); }
+
+      .mark {
+        flex: 0 0 auto;
+        width: 26px;
+        height: 26px;
+        display: grid;
+        place-items: center;
+        border-radius: 50%;
+        background: var(--hover);
+        color: var(--text-dim);
+      }
+
+      .mark svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+      .flight.landed .mark { color: var(--accent); }
+      .flight.lost .mark, .flight.stalled .mark { color: var(--danger); }
+
+      .body { flex: 1 1 auto; min-width: 0; }
+
+      .name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 12.5px;
+        font-weight: 600;
+      }
+
+      .under {
+        margin-top: 2px;
+        font-size: 11px;
+        color: var(--text-dim);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      /* Only while it is in the air. */
+      .track {
+        height: 4px;
+        margin-top: 5px;
+        border-radius: 999px;
+        background: var(--track);
+        overflow: hidden;
+      }
+
+      .track i {
+        display: block;
+        height: 100%;
+        border-radius: 999px;
+        background: var(--accent);
+        transition: width 240ms linear;
+      }
+
+      /* A size nobody told us: the bar sweeps rather than fills. */
+      .track.unknown i {
+        width: 40% !important;
+        animation: sweep 1.4s ease-in-out infinite;
+      }
+
+      @keyframes sweep {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(250%); }
+      }
+
+      .doings { flex: 0 0 auto; display: flex; gap: 2px; }
+
+      .doings button {
+        width: 26px;
+        height: 26px;
+        display: grid;
+        place-items: center;
+        border-radius: 50%;
+        color: var(--text-dim);
+        transition: background 120ms ease, color 120ms ease;
+      }
+
+      .doings button svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+      .doings button:hover { background: var(--hover); color: var(--text); }
+      .doings button.danger:hover { background: rgba(217, 74, 74, 0.16); color: var(--danger); }
+
+      .empty {
+        padding: 18px 10px 22px;
+        text-align: center;
+        font-size: 12.5px;
+        color: var(--text-dim);
+      }
+
+      .foot {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 8px 4px;
+        border-top: 1px solid var(--line);
+        margin-top: 4px;
+      }
+
+      .foot .grow { flex: 1 1 auto; }
+    </style>
+  </head>
+  <body>
+    <div class="panel" id="panel">
+      <div class="head">
+        <span class="grow">Flights</span>
+        <button class="link" id="clear">Clear finished</button>
+      </div>
+      <div class="list" id="list"></div>
+      <div class="foot">
+        <span class="grow"></span>
+        <button class="link" id="all">See all flights</button>
+      </div>
+    </div>
+    <script src="./flights-panel.js"></script>
+  </body>
+</html>

@@ -77,6 +77,17 @@ if (isInternalPage) {
       ipcRenderer.on('cloud:theme', handler);
       return () => ipcRenderer.removeListener('cloud:theme', handler);
     },
+    flights: {
+      list: () => ipcRenderer.invoke('flights:list'),
+      act: (action, id) => ipcRenderer.invoke('flights:act', action, id),
+      chooseFolder: () => ipcRenderer.invoke('flights:choose-folder'),
+      useDefaultFolder: () => ipcRenderer.invoke('flights:use-default-folder'),
+      onChanged: (callback) => {
+        const handler = (_event, state) => callback(state);
+        ipcRenderer.on('flights:changed', handler);
+        return () => ipcRenderer.removeListener('flights:changed', handler);
+      }
+    },
     cards: {
       list: () => ipcRenderer.invoke('cards:list'),
       save: (card) => ipcRenderer.invoke('cards:save', card),

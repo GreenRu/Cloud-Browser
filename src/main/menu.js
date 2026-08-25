@@ -216,6 +216,11 @@ function buildAppMenu(getShell, plugins = null) {
           click: withShell((s) => s.newTab('stratus://droplets'))
         },
         {
+          label: 'Flights',
+          accelerator: 'CommandOrControl+J',
+          click: withShell((s) => s.newTab('stratus://flights'))
+        },
+        {
           label: 'Show Droplet Bar',
           accelerator: 'CommandOrControl+Shift+B',
           click: withShell((s) => s.setDropletsVisible(s.store.get('showDroplets') === false))
@@ -273,6 +278,7 @@ function popupToolsMenu(shellRef, x, y) {
       click: () => shellRef.setDropletsVisible(shellRef.store.get('showDroplets') === false)
     },
     { label: 'All droplets', accelerator: 'Ctrl+Shift+O', click: () => shellRef.newTab('stratus://droplets') },
+    { label: 'Flights', accelerator: 'Ctrl+J', click: () => shellRef.newTab('stratus://flights') },
     { label: 'History', accelerator: 'Ctrl+H', click: () => shellRef.newTab('stratus://history') },
     { label: 'Settings', accelerator: 'Ctrl+,', click: () => shellRef.newTab('stratus://settings') },
     { type: 'separator' },

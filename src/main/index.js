@@ -29,6 +29,7 @@ const { DEFAULT_SHORTCUTS, SEARCH_ENGINES, normalizeInput, prettifyUrl, targetsF
 const { buildAppMenu, popupToolsMenu } = require('./menu');
 const { registerSky } = require('./sky');
 const { PluginHost } = require('./plugins');
+const { Flights } = require('./flights');
 const { CardWallet } = require('./cards');
 const importer = require('./import');
 
@@ -72,6 +73,7 @@ let store;
 let vault;
 let plugins;
 let cards;
+let flights;
 
 /** Permissions we grant silently. Everything else is denied until there is UI to ask. */
 const AUTO_GRANTED = new Set(['fullscreen', 'clipboard-sanitized-write', 'pointerLock']);
@@ -87,20 +89,28 @@ function configureSession() {
     callback(AUTO_GRANTED.has(permission));
   });
 
+  /*
+   * A file has left a site. Everything about it from here is the flight
+   * manager's business - where it lands, how it is reported, and what may be
+   * done to it. This hook only hands it over.
+   */
   ses.on('will-download', (_event, item) => {
-    const shellRef = currentShell();
-    const name = item.getFilename();
-    shellRef?.send('shell:toast', { kind: 'download', message: `Downloading ${name}…` });
+    const flight = flights.take(item);
+    currentShell()?.send('shell:toast', {
+      kind: 'download',
+      message: `${flight.name} is on its way`
+    });
 
     item.once('done', (_e, state) => {
+      const shellRef = currentShell();
       if (state === 'completed') {
         shellRef?.send('shell:toast', {
           kind: 'download-done',
-          message: `Saved ${name}`,
+          message: `${flight.name} has landed`,
           path: item.getSavePath()
         });
-      } else {
-        shellRef?.send('shell:toast', { kind: 'error', message: `Download failed: ${name}` });
+      } else if (state !== 'cancelled') {
+        shellRef?.send('shell:toast', { kind: 'error', message: `${flight.name} did not arrive` });
       }
     });
   });
@@ -359,6 +369,51 @@ function registerIpc() {
     }
   });
 
+  // --- flights -----------------------------------------------------------------
+
+  ipcMain.handle('flights:list', () => flights.state());
+
+  /*
+   * Everything a flight can be asked to do. The renderer names one by its id
+   * and nothing else - it never holds the download, and never names a path.
+   */
+  ipcMain.handle('flights:act', (_event, action, id) => {
+    const key = String(id || '');
+    switch (action) {
+      case 'hold': flights.hold(key); break;
+      case 'carry-on': flights.carryOn(key); break;
+      case 'call-off': flights.callOff(key); break;
+      case 'again': flights.again(key, session.fromPartition(PARTITION)); break;
+      case 'forget': flights.forget(key); break;
+      case 'clear': flights.clearFinished(); break;
+      case 'reveal': flights.reveal(key); break;
+      case 'open': flights.open(key); break;
+      default: break;
+    }
+    return flights.state();
+  });
+
+  /** Where flights land. Chosen with a picker, so no path is ever invented. */
+  ipcMain.handle('flights:choose-folder', async () => {
+    const picked = await dialog.showOpenDialog(currentShell()?.window, {
+      title: 'Where should flights land?',
+      properties: ['openDirectory', 'createDirectory'],
+      defaultPath: flights.folder
+    });
+    if (picked.canceled || !picked.filePaths.length) return { cancelled: true, folder: flights.folder };
+    store.set('downloadFolder', picked.filePaths[0]);
+    return { ok: true, folder: flights.folder };
+  });
+
+  ipcMain.handle('flights:use-default-folder', () => {
+    store.set('downloadFolder', '');
+    return { ok: true, folder: flights.folder };
+  });
+
+  ipcMain.on('flights:panel', withShell((s, x, y) => s.showFlightsPanel(x, y)));
+  ipcMain.on('flights:panel-close', withShell((s) => s.hideFlightsPanel()));
+  ipcMain.on('flights:panel-size', withShell((s, size) => s.placeFlightsPanel(size)));
+
   // --- plugins ---------------------------------------------------------------
 
   /** Everything installed, whether it loaded, and whether it is switched on. */
@@ -586,6 +641,16 @@ if (!app.requestSingleInstanceLock()) {
     vault = new PasswordVault();
     plugins = new PluginHost(store);
     cards = new CardWallet(store);
+    flights = new Flights(store, () => {
+      const shellRef = currentShell();
+      if (!shellRef) return;
+      const state = flights.state();
+      shellRef.send('flights:changed', state);
+      shellRef.sendFlights(state);
+      shellRef.showFlightProgress(flights.overall());
+    });
+    // Nothing is in the air at startup, whatever last time thought.
+    flights.groundEverything();
     setPluginPages(plugins.pages());
     nativeTheme.themeSource = store.get('theme') === 'night' ? 'dark' : 'light';
     configureSession();

@@ -11,6 +11,15 @@ const DEFAULTS = {
   searchEngine: 'google',
   shortcuts: { ...DEFAULT_SHORTCUTS },
   savePasswords: true,
+
+  /*
+   * Flights - what a download is called here, because it arrives. The list is
+   * the record; the folder is where they land, and empty means the system's own
+   * Downloads folder.
+   */
+  flights: [],
+  downloadFolder: '',
+
   saveCards: true,                    // offer to keep payment cards at all
   saveCardCvv: false,                 // and the code on the back with them
   cvvDisabledAt: 0,                   // when that was last switched off - see cards.js

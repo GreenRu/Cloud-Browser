@@ -27,7 +27,7 @@ committable by accident.
 | --- | --- |
 | `logins.json` | Saved logins. Usernames in the clear, **passwords only ever as ciphertext** |
 | `cards.json` | Saved cards. Brand, last four digits, name and expiry in the clear; **the number and the security code only ever as ciphertext** |
-| `state.json` | Preferences, droplets (kept pages), history, the last session, window bounds, plugin settings |
+| `state.json` | Preferences, droplets (kept pages), history, flights, the last session, window bounds, plugin settings |
 | `Local State` | Chromium's own state, including the key the vault is bound to |
 | `Cookies`, `Local Storage`, `IndexedDB`, `Network/` | What websites stored, exactly as any browser keeps it |
 | `Cache/`, `Code Cache/`, `GPUCache/` | Chromium's caches |
@@ -99,6 +99,21 @@ one setting in the browser with a memory.
 
 That last point is why the rule is enforced by a timestamp rather than only by
 the deletion: a deletion can be undone by a backup, and a timestamp cannot.
+
+## Flights
+
+The record of what you have downloaded is kept in `state.json`: the file's name,
+the address it came from, where it was saved, and how big it was. That is enough
+to open it again, show it in its folder, or send it again - and it is the same
+information every browser keeps.
+
+It is a list of what you have downloaded, so it is worth knowing where it is.
+**Clear the finished ones** on `stratus://flights` empties it; removing one entry
+takes it off the list and leaves the file alone.
+
+Files land in the system's Downloads folder unless you choose another on that
+page. A name already in use is numbered rather than written over, so nothing of
+yours is ever replaced by something from a website.
 
 ## What you can clear, and from where
 

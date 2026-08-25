@@ -79,6 +79,12 @@ were valid, and they matched nothing. `grep` shows them as if the backslash were
 simply missing, because the terminal obeys the backspace. `grep -cP '\x08' src`
 finds them, and `cat -A` shows them as `^H`.
 
+**A suite that names where the code used to live tests nothing.** Every Stratus
+suite pointed at the old directory after the tree moved under `Ozone/`, and each
+one failed on `Cannot find module` rather than on an assertion - which reads as a
+broken suite rather than as a suite that never ran. Check the first line of the
+output, not just the last.
+
 **Kill stray Electron instances before launching.** The single-instance lock
 silently hands the launch to an older process, so a stale instance reads stale
 state and the new code appears not to work. Worse: a stray window *covers* the
@@ -152,11 +158,12 @@ Worth reaching for when Electron itself will not start.
 
 ## Coverage as it stands
 
-Roughly 580 assertions across twenty suites: the browser end to end, merge and
+Roughly 620 assertions across twenty-one suites: the browser end to end, merge and
 split, pane seams, the closing animation, the preview bubble in the chrome and
 in a page, multi-pane search, themes, the plugin host, the timeline, the sky,
 settings and history, the password vault, the card wallet and its rule about the
 security code, reading another browser's bookmarks and exported files, filling a
-card into a real checkout, and the settings page that drives all of it. Each was
+card into a real checkout, flights coming down a real socket, and the settings
+page that drives all of it. Each was
 written against a specific piece of behaviour while it was being built, and most
 exist because something was once wrong in a way a screenshot did not show.

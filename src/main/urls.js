@@ -30,11 +30,14 @@ const INTERNAL_PAGES = {
   'stratus://newtab': path.join(__dirname, '..', 'pages', 'newtab.html'),
   'stratus://history': path.join(__dirname, '..', 'pages', 'history.html'),
   'stratus://droplets': path.join(__dirname, '..', 'pages', 'droplets.html'),
+  'stratus://flights': path.join(__dirname, '..', 'pages', 'flights.html'),
   'stratus://settings': path.join(__dirname, '..', 'pages', 'settings.html'),
   'stratus://passwords': path.join(__dirname, '..', 'pages', 'settings.html'),
   // What droplets were called before, so an address already written down still
   // lands somewhere.
-  'stratus://bookmarks': path.join(__dirname, '..', 'pages', 'droplets.html')
+  'stratus://bookmarks': path.join(__dirname, '..', 'pages', 'droplets.html'),
+  // And what everyone else calls a flight.
+  'stratus://downloads': path.join(__dirname, '..', 'pages', 'flights.html')
 };
 
 /**
@@ -117,6 +120,7 @@ const INTERNAL_TITLES = {
   'stratus://newtab': 'New Tab',
   'stratus://history': 'History',
   'stratus://droplets': 'Droplets',
+  'stratus://flights': 'Flights',
   'stratus://settings': 'Settings',
   'stratus://passwords': 'Settings'
 };

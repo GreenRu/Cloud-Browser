@@ -105,6 +105,12 @@ follow. What they share, and what any of them may not do, is the
 - **Droplets** — kept pages, in a row above the page that `Ctrl+Shift+B` shows
   and hides. Right-click one to open it, open it in a new cloud, copy its link
   or delete it.
+- **Flights** — what a download is called here, because it arrives. Each one
+  crosses the sky as a meteor while it comes down; point at it and the file
+  names itself. The plane on the toolbar says how many are in the air and opens
+  a panel to hold, resume, cancel or retry them, and `stratus://flights`
+  (`Ctrl+J`) is the whole record, kept between launches. A name already in use is
+  numbered rather than written over.
 - **Saved passwords**, encrypted with the OS keystore — see
   [docs/PRIVACY.md](docs/PRIVACY.md).
 - **Saved cards**, encrypted the same way. Only the last four digits and the
@@ -161,7 +167,7 @@ Writing your own is [docs/PLUGINS.md](docs/PLUGINS.md).
 | `Ctrl+F`, `Esc` | Find in page, close find / stop loading |
 | `Ctrl+D` | Keep this page as a droplet |
 | `Ctrl+Shift+B` | Show or hide the droplet bar |
-| `Ctrl+H`, `Ctrl+Shift+O` | History, droplets |
+| `Ctrl+H`, `Ctrl+Shift+O`, `Ctrl+J` | History, droplets, flights |
 | `Ctrl+=` / `Ctrl+-` / `Ctrl+0` | Zoom in / out / reset |
 | `Ctrl+,` | Settings |
 | `Ctrl+Shift+I`, `F12` | Developer tools for the page |
@@ -184,6 +190,7 @@ src/
     passwords.js   the encrypted login vault
     plugins.js     the plugin host: manifests, injection, themes, toolbar
     sky.js         the shortcut clouds on the new tab page
+    flights.js     downloads: where they land, what may be done to one
   preload/
     chrome.js      context bridge for the browser UI
     page.js        bridges for the browser's own pages and for plugin pages

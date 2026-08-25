@@ -57,6 +57,15 @@ contextBridge.exposeInMainWorld('cloud', {
     stop: () => ipcRenderer.send('find:stop')
   },
 
+  /** Files on their way down. The renderer names one by id and nothing else. */
+  flights: {
+    list: () => ipcRenderer.invoke('flights:list'),
+    act: (action, id) => ipcRenderer.invoke('flights:act', action, id),
+    chooseFolder: () => ipcRenderer.invoke('flights:choose-folder'),
+    useDefaultFolder: () => ipcRenderer.invoke('flights:use-default-folder'),
+    panel: (x, y) => ipcRenderer.send('flights:panel', x, y)
+  },
+
   droplets: {
     toggle: () => ipcRenderer.send('droplet:toggle'),
     remove: (id) => ipcRenderer.send('droplet:remove', id),
@@ -89,6 +98,7 @@ contextBridge.exposeInMainWorld('cloud', {
     merged: listen('shell:merged'),
     previewTarget: listen('shell:preview-target'),
     previewExpanding: listen('shell:preview-expanding'),
-    fullScreen: listen('shell:full-screen')
+    fullScreen: listen('shell:full-screen'),
+    flights: listen('flights:changed')
   }
 });

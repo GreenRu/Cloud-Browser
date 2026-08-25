@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy"
+          content="default-src 'none'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:;" />
+    <title>Flights</title>
+    <link rel="stylesheet" href="./shared.css" />
+    <style>
+      /* A flight in the list: what it is, how far along, and where it landed. */
+      .flight-line { display: flex; align-items: baseline; gap: 8px; }
+      .flight-where { color: var(--text-dim); font-size: 11.5px; }
+
+      .flight-track {
+        height: 4px;
+        margin-top: 7px;
+        border-radius: 999px;
+        background: var(--card-hover);
+        overflow: hidden;
+      }
+
+      .flight-track i {
+        display: block;
+        height: 100%;
+        border-radius: 999px;
+        background: var(--accent);
+        transition: width 240ms linear;
+      }
+
+      .flight-track.unknown i { width: 40% !important; animation: sweep 1.4s ease-in-out infinite; }
+
+      @keyframes sweep {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(250%); }
+      }
+
+      .folder-line {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .folder-path {
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 12.5px;
+        color: var(--text-dim);
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <h1 class="page-title">Flights</h1>
+      <p class="page-sub" id="count">Loading…</p>
+
+      <div class="toolbar-row">
+        <input class="field" id="filter" type="text" placeholder="Search flights"
+               spellcheck="false" autocomplete="off" />
+      </div>
+
+      <div class="card" id="list"></div>
+
+      <section class="section">
+        <h2 class="section-title">Where they land</h2>
+        <p class="section-note">
+          Files come down here. A name already in use is numbered rather than
+          written over, so nothing of yours is ever replaced by something from a
+          website.
+        </p>
+        <div class="folder-line">
+          <span class="folder-path" id="folder"></span>
+          <button class="ghost-btn" id="choose">Choose a folder</button>
+          <button class="ghost-btn" id="default">Use the usual one</button>
+        </div>
+      </section>
+
+      <div class="toolbar-row">
+        <button class="ghost-btn danger" id="clear">Clear the finished ones</button>
+      </div>
+    </main>
+    <script src="../shared/theme.js"></script>
+    <script src="../shared/stars.js"></script>
+    <script src="../shared/birds.js"></script>
+    <script src="./flights.js"></script>
+  </body>
+</html>
