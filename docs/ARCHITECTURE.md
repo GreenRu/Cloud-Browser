@@ -53,7 +53,7 @@ window
 ├── the page views               one per pane of the active cloud
 ├── the preview card             the frame around the address bar's preview
 ├── the previews                 one per thing that can ask for one
-└── the cloud menu               over all of it, wherever it is opened
+└── the menu view                over all of it, wherever it is opened
 ```
 
 The consequence catches everyone once: **the chrome cannot draw over a page.**
@@ -65,7 +65,8 @@ open. Two things follow from it:
   invisible the entire time — every measurement correct, nothing on screen.
 - The grip on the seam between merged panes *is* chrome HTML, and works,
   because the seam is the one part of the page area no view covers.
-- The menu on a cloud is a view too (`src/pages/cloud-menu.html`). It was chrome
+- The menu is a view too (`src/pages/cloud-menu.html`) - one view, shown for a
+  cloud and for a droplet alike. It was chrome
   HTML first, on the reasoning that the strip is chrome - but a menu opened on a
   cloud is wider than the sidebar, so its right-hand edge was cut off by the
   page. What is *on* it is decided in the main process, where the state is -
@@ -74,6 +75,14 @@ open. Two things follow from it:
   chosen, and nothing there is trusted but the name. It is drawn as a cloud, by
   the same lobe generator the strip uses, and the view is padded so the lobes
   have somewhere to rise into rather than being clipped at its edge.
+
+  The droplet bar hit the same wall for the same reason. The bar itself is fine -
+  it is chrome, sitting *above* the page rather than over it - but a menu opened
+  from it hangs down, straight into the page. It goes through the same view,
+  which is why `_showMenu` takes what the menu is for (`{ kind, id }`) and keeps
+  it in the main process: the view is handed labels and hands back a name, and
+  the browser alone decides what that name means. A third kind of menu is a
+  `dropletMenu` and a `runDropletMenu`, and nothing else.
 
 Activating a cloud adds its views, which puts them on top, so the card and the
 previews are lifted back afterwards — frame first, previews over it.
@@ -148,6 +157,39 @@ about the other clouds leaks into a page that never asked.
 Intents go back the other way over an explicitly enumerated channel list. The
 renderer never mutates browsing state directly.
 
+## Secrets: logins and cards
+
+Both stores follow one rule: every secret is encrypted with Electron's
+`safeStorage`, which delegates to the OS keystore, and **if the platform cannot
+encrypt then saving is refused** rather than falling back to plaintext. Only what
+a list has to show stays readable - a username, a card's last four digits.
+
+Filling follows one rule too: **the page never says who it is.** The renderer
+sends the submitted values, or a bare "someone put the cursor in a card field",
+and the main process reads the origin from the sending tab's own URL. Nothing is
+filled in an iframe, on one of the browser's own pages, or when several entries
+match - with two saved there is no way to know which is meant, and guessing is
+worse than asking.
+
+`src/main/cards.js` carries the one setting with a memory. Keeping the code on
+the back of a card is off by default; switching it off destroys every code held
+*and writes down when*. A code is then only ever offered if it was saved after
+that moment, so one that outlived the wipe - an older file, a restored backup -
+is not offered either. It is enforced by the timestamp rather than only by the
+deletion because a deletion can be undone by a backup and a timestamp cannot.
+
+## Bringing things over
+
+`src/main/import.js` reads another browser's bookmarks straight out of its own
+files: Chromium's `Bookmarks` JSON, and Firefox's `bookmarkbackups/*.jsonlz4`,
+whose mozLz4 framing is decoded in about forty lines rather than by taking on a
+dependency.
+
+Passwords deliberately are not read that way. They are sealed to the browser that
+saved them, and prising them out would mean doing what a password stealer does.
+They come in from a CSV the user exported, as do cards. Header names differ
+between browsers, so `COLUMNS` maps several spellings onto one meaning.
+
 ## Themes
 
 A theme is one of two built-in palettes, plus — when a plugin offers one — a set
@@ -209,3 +251,10 @@ with the evidence.
 - **A suite that builds the shell by hand never boots the app.** Every suite
   constructs `BrowserShell` directly, so none of them runs `src/main/index.js`.
   Run `npx electron .` and read the output.
+- **A hidden window never gives its document focus.** `show: false` is the
+  obvious way to keep a suite out of the way, and anything depending on focus -
+  `focusin`, `document.activeElement` - then quietly never happens.
+- **One throw stops the rest of a loop.** Filling a form walks a list of fields,
+  so an exception on the third leaves the first two filled and the rest empty,
+  which reads exactly like "the last fields were not recognised". When *some* of
+  a sequence worked, suspect a throw before suspecting the matching.
